@@ -1,0 +1,11 @@
+{
+  "name": "pachybase/core",
+  "description": "PachyBase MVP skeleton",
+  "type": "project",
+  "require": {},
+  "autoload": {
+    "psr-4": {
+      "PachyBase\\": "core/"
+    }
+  }
+}
