@@ -2,7 +2,9 @@
   "name": "pachybase/core",
   "description": "PachyBase MVP skeleton",
   "type": "project",
-  "require": {},
+  "require": {
+    "vlucas/phpdotenv": "^5.5"
+  },
   "autoload": {
     "psr-4": {
       "PachyBase\\": "core/"

@@ -123,7 +123,49 @@ The development stack typically includes:
 * optional cache layer
 
 ---
+# Get Started
 
+### Quick Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/jandersongarcia/PachyBase.git
+   cd PachyBase
+   ```
+
+2. **Configure database** (optional - defaults to MySQL)
+   Edit `.env` and set your preferred database:
+   ```env
+   DB_DRIVER=mysql  # or pgsql
+   ```
+
+3. **Run setup**
+   ```bash
+   # Linux/Mac
+   ./setup.sh
+   
+   # Windows
+   setup.bat
+   ```
+
+4. **Access your API**
+   Visit http://localhost:8080
+   
+   You should see a JSON response with your app configuration:
+   ```json
+   {
+     "name": "PachyBase",
+     "status": "running",
+     "db_driver": "mysql",
+     "db_host": "db",
+     "db_port": "3306",
+     "db_database": "pachybase"
+   }
+   ```
+
+That's it! Your backend is ready in minutes.
+
+---
 # Project Structure
 
 ```
@@ -168,19 +210,33 @@ git clone https://github.com/jandersongarcia/PachyBase.git
 cd PachyBase
 ```
 
-Start the environment:
+Configure the database in `.env`:
 
-```
-docker compose -f docker/docker-compose.yml up -d
+Edit the `.env` file to choose your database driver:
+
+```env
+DB_DRIVER=mysql  # or pgsql
+DB_PORT=3306     # 3306 for MySQL, 5432 for PostgreSQL
+DB_USERNAME=root # root for MySQL, postgres for PostgreSQL
+DB_PASSWORD=root
+DB_DATABASE=pachybase
 ```
 
-Run the setup script:
+Run the setup script (on Windows use `setup.bat`, on Linux/Mac use `./setup.sh`):
 
 ```
 ./setup.sh
 ```
 
-Once running, the API will be available locally.
+Or on Windows:
+
+```
+setup.bat
+```
+
+This will install dependencies, generate the Docker configuration based on your database choice, and start the containers.
+
+Once running, the API will be available locally at http://localhost:8080.
 
 ---
 
