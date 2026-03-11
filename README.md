@@ -4,297 +4,95 @@
   <img src="assets/logo.png" width="200" alt="PachyBase Logo">
 </p>
 
-Open-source **self-hosted backend platform** designed to accelerate API development with automatic CRUD generation and predictable AI-friendly JSON responses.
+# PachyBase
 
-PachyBase allows developers to bootstrap a complete backend infrastructure in minutes using **Docker**, while keeping full control over the codebase and architecture.
+PachyBase is an open-source, self-hosted backend foundation built with PHP, focused on predictable JSON APIs, modular architecture, and simple local development through Docker.
 
-The platform focuses on simplicity, extensibility and compatibility with modern **AI-assisted frontend development workflows**.
+The project is designed for developers who want more control over their backend stack, infrastructure, and deployment flow without depending on external BaaS platforms.
 
----
+## Highlights
 
-# Core Philosophy
+- API-first approach
+- Predictable JSON response structure
+- Modular and extensible architecture
+- Self-hosted and Docker-ready
+- Support for different database drivers
+- PHP 8+ oriented structure
+- Clean and maintainable codebase
 
-Modern applications repeatedly rebuild the same backend layers:
+## Standard API Response
 
-* CRUD APIs
-* authentication
-* database connections
-* validation
-* pagination
-* structured responses
-* API documentation
-
-PachyBase automates these tasks while keeping the backend **fully transparent and customizable**.
-
-It is not a low-code tool.
-
-It is a **developer-first backend foundation**.
-
----
-
-# Key Features
-
-### API-First Architecture
-
-PachyBase is built primarily as an API backend.
-
-Frontends can include:
-
-* web applications
-* mobile apps
-* AI-generated interfaces
-* internal tools
-* microservices
-
----
-
-### Predictable JSON Responses
-
-Every endpoint follows the same structured response format:
+All responses should follow the project standard:
 
 ```json
 {
   "success": true,
   "data": {},
-  "meta": {},
-  "error": null
-}
-```
-
-Example response:
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "Jane Doe"
-    }
-  ],
   "meta": {
-    "pagination": {
-      "page": 1,
-      "per_page": 20,
-      "total": 100
-    }
+    "contract_version": "1.0",
+    "request_id": "b0bb2f930d4b4f5ab9e2d1f7b74b9df6",
+    "timestamp": "2026-03-11T03:00:00+00:00",
+    "path": "/",
+    "method": "GET"
   },
   "error": null
 }
 ```
 
-This predictable structure makes PachyBase especially suitable for **AI-driven UI generation tools**.
+Error responses keep the same outer structure:
 
----
-
-### Automatic CRUD API Generation
-
-For each database table PachyBase generates REST endpoints automatically.
-
-Example for a `users` table:
-
-```
-GET    /api/users
-GET    /api/users/{id}
-POST   /api/users
-PUT    /api/users/{id}
-DELETE /api/users/{id}
-```
-
-Supported features include:
-
-* pagination
-* filtering
-* sorting
-* validation
-* structured responses
-
----
-
-### Docker-First Environment
-
-PachyBase is designed to run using Docker.
-
-The development stack typically includes:
-
-* PHP runtime
-* Nginx
-* database engine
-* optional cache layer
-
----
-# Get Started
-
-### Quick Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/jandersongarcia/PachyBase.git
-   cd PachyBase
-   ```
-
-2. **Configure database** (optional - defaults to MySQL)
-   Edit `.env` and set your preferred database:
-   ```env
-   DB_DRIVER=mysql  # or pgsql
-   ```
-
-3. **Run setup**
-   ```bash
-   # Linux/Mac
-   ./setup.sh
-   
-   # Windows
-   setup.bat
-   ```
-
-4. **Access your API**
-   Visit http://localhost:8080
-   
-   You should see a JSON response with your app configuration:
-   ```json
-   {
-     "name": "PachyBase",
-     "status": "running",
-     "db_driver": "mysql",
-     "db_host": "db",
-     "db_port": "3306",
-     "db_database": "pachybase"
-   }
-   ```
-
-That's it! Your backend is ready in minutes.
-
----
-# Project Structure
-
-```
-/core
-/api
-/database
-/auth
-/modules
-/services
-/utils
-/config
-/docker
-/public
+```json
+{
+  "success": false,
+  "data": null,
+  "meta": {
+    "contract_version": "1.0",
+    "request_id": "b0bb2f930d4b4f5ab9e2d1f7b74b9df6",
+    "timestamp": "2026-03-11T03:00:00+00:00",
+    "path": "/users",
+    "method": "POST"
+  },
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "type": "application_error",
+    "message": "The request payload is invalid.",
+    "details": []
+  }
+}
 ```
 
-Key files:
+### Contract goals
 
-```
-docker/docker-compose.yml   -> container orchestration
-public/index.php            -> application entrypoint
-composer.json               -> project configuration
-setup.sh                    -> environment bootstrap script
-```
+- `success` is always a boolean.
+- `data` always exists, even when `null`.
+- `meta` always exists and carries machine-readable request context.
+- `error` is always `null` on success or a fixed object on failure.
+- The API never mixes plain text, HTML, and JSON for different failure modes.
 
----
+### Current implementation
 
-# Requirements
+- [`public/index.php`](./public/index.php) now responds through a centralized JSON contract.
+- [`core/Http/ApiResponse.php`](./core/Http/ApiResponse.php) is the single response formatter.
+- [`core/Http/ErrorHandler.php`](./core/Http/ErrorHandler.php) converts PHP errors and exceptions into the same API structure.
 
-* Docker
-* Docker Compose
-* PHP 8+
-* Composer
+## Docker install
 
----
-
-# Installation
-
-Clone the repository:
-
-```
-git clone https://github.com/jandersongarcia/PachyBase.git
-cd PachyBase
-```
-
-Configure the database in `.env`:
-
-Edit the `.env` file to choose your database driver:
+Configure the database connection in [`.env`](./.env):
 
 ```env
-DB_DRIVER=mysql  # or pgsql
-DB_PORT=3306     # 3306 for MySQL, 5432 for PostgreSQL
-DB_USERNAME=root # root for MySQL, postgres for PostgreSQL
-DB_PASSWORD=root
+DB_DRIVER=mysql
+DB_HOST=db
+DB_PORT=3306
 DB_DATABASE=pachybase
+DB_USERNAME=root
+DB_PASSWORD=root
 ```
 
-Run the setup script (on Windows use `setup.bat`, on Linux/Mac use `./setup.sh`):
+Then run:
 
-```
-./setup.sh
-```
-
-Or on Windows:
-
-```
-setup.bat
+```bash
+composer install
+composer docker-install
 ```
 
-This will install dependencies, generate the Docker configuration based on your database choice, and start the containers.
-
-Once running, the API will be available locally at http://localhost:8080.
-
----
-
-# AI Integration
-
-PachyBase exposes machine-readable endpoints to help AI systems understand the backend.
-
-Example endpoints:
-
-```
-/ai/schema
-/openapi.json
-```
-
-These endpoints allow tools to:
-
-* generate forms automatically
-* build admin dashboards
-* generate SDKs
-* assist frontend generation
-
----
-
-# Example Use Cases
-
-PachyBase works well for:
-
-* startups building MVPs
-* internal tools
-* SaaS backends
-* microservices
-* AI-generated applications
-
----
-
-# Non-Goals
-
-PachyBase intentionally avoids becoming:
-
-* a visual no-code builder
-* a CMS
-* a cloud-locked platform
-* a heavy enterprise framework
-
-The core objective remains **lightweight backend automation**.
-
----
-
-# License
-
-MIT License
-
----
-
-# Author
-
-Created by **Janderson Garcia**
-
-GitHub:
-
-[https://github.com/jandersongarcia](https://github.com/jandersongarcia)
+The `docker-install` script validates the database settings, generates `docker/docker-compose.yml`, and starts the Docker containers with the selected database engine.

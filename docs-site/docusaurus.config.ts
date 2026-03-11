@@ -1,0 +1,121 @@
+import {themes as prismThemes} from 'prism-react-renderer';
+import type {Config} from '@docusaurus/types';
+import type * as Preset from '@docusaurus/preset-classic';
+
+const config: Config = {
+  title: 'PachyBase',
+  tagline: 'Predictable backend documentation for humans and AI',
+  favicon: 'img/favicon.ico',
+  future: {
+    v4: true,
+  },
+  url: 'https://pachybase.example.com',
+  baseUrl: '/',
+  organizationName: 'jandersongarcia',
+  projectName: 'PachyBase',
+  onBrokenLinks: 'throw',
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'pt-BR'],
+    localeConfigs: {
+      en: {
+        htmlLang: 'en',
+        label: 'English',
+      },
+      'pt-BR': {
+        htmlLang: 'pt-BR',
+        label: 'Português (Brasil)',
+      },
+    },
+  },
+  presets: [
+    [
+      'classic',
+      {
+        docs: {
+          sidebarPath: './sidebars.ts',
+          routeBasePath: '/',
+          editUrl:
+            'https://github.com/jandersongarcia/PachyBase/tree/main/docs-site/',
+        },
+        blog: false,
+        theme: {
+          customCss: './src/css/custom.css',
+        },
+      } satisfies Preset.Options,
+    ],
+  ],
+  themeConfig: {
+    image: 'img/docusaurus-social-card.jpg',
+    colorMode: {
+      respectPrefersColorScheme: true,
+    },
+    navbar: {
+      title: 'PachyBase',
+      logo: {
+        alt: 'PachyBase Logo',
+        src: 'img/logo.svg',
+      },
+      items: [
+        {
+          type: 'docSidebar',
+          sidebarId: 'tutorialSidebar',
+          position: 'left',
+          label: 'Documentation',
+        },
+        {
+          type: 'localeDropdown',
+          position: 'right',
+        },
+        {
+          href: 'https://github.com/jandersongarcia/PachyBase',
+          label: 'GitHub',
+          position: 'right',
+        },
+      ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: 'Docs',
+          items: [
+            {
+              label: 'Overview',
+              to: '/',
+            },
+            {
+              label: 'API Contract',
+              to: '/api-contract',
+            },
+          ],
+        },
+        {
+          title: 'Project',
+          items: [
+            {
+              label: 'Docker install',
+              to: '/docker-install',
+            },
+          ],
+        },
+        {
+          title: 'More',
+          items: [
+            {
+              label: 'GitHub',
+              href: 'https://github.com/jandersongarcia/PachyBase',
+            },
+          ],
+        },
+      ],
+      copyright: `Copyright (c) ${new Date().getFullYear()} PachyBase. Built with Docusaurus.`,
+    },
+    prism: {
+      theme: prismThemes.github,
+      darkTheme: prismThemes.dracula,
+    },
+  } satisfies Preset.ThemeConfig,
+};
+
+export default config;

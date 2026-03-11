@@ -5,6 +5,9 @@
   "require": {
     "vlucas/phpdotenv": "^5.5"
   },
+  "scripts": {
+    "docker-install": "@php scripts/docker-install.php"
+  },
   "autoload": {
     "psr-4": {
       "PachyBase\\": "core/"
