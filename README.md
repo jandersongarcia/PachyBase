@@ -71,13 +71,51 @@ Error responses keep the same outer structure:
 
 ### Current implementation
 
-- [`public/index.php`](./public/index.php) now responds through a centralized JSON contract.
+- [`public/index.php`](./public/index.php) responds through a centralized JSON contract and acts as the front controller.
+- [`core/Http/Router.php`](./core/Http/Router.php) provides a simple and fast routing engine.
+- [`core/Http/Request.php`](./core/Http/Request.php) abstracts incoming HTTP requests safely.
 - [`core/Http/ApiResponse.php`](./core/Http/ApiResponse.php) is the single response formatter.
 - [`core/Http/ErrorHandler.php`](./core/Http/ErrorHandler.php) converts PHP errors and exceptions into the same API structure.
 
+## Routing and Controllers
+
+Routes are registered in `public/index.php` using the `$router` instance. 
+You can map routes directly to Controller classes within the `core/Controllers/` namespace.
+
+Example:
+
+```php
+use PachyBase\Controllers\SystemController;
+
+$router->get('/status', [SystemController::class, 'status']);
+```
+
+And your Controller method receives the abstracted `Request` object:
+
+```php
+namespace PachyBase\Controllers;
+
+use PachyBase\Http\Request;
+use PachyBase\Http\ApiResponse;
+
+class SystemController
+{
+    public function status(Request $request): void
+    {
+        // Example reading a query param: ?verbose=true
+        $isVerbose = $request->query('verbose', false);
+        
+        // Example reading JSON body on POST
+        // $data = $request->json('field_name');
+
+        ApiResponse::success(['system' => 'ok']);
+    }
+}
+```
+
 ## Docker install
 
-Configure the database connection in [`.env`](./.env):
+Configure the database connection in [`.env`](./.env). It supports `mysql` and `pgsql`:
 
 ```env
 DB_DRIVER=mysql
@@ -95,4 +133,10 @@ composer install
 composer docker-install
 ```
 
-The `docker-install` script validates the database settings, generates `docker/docker-compose.yml`, and starts the Docker containers with the selected database engine.
+The `docker-install` script is a smart automation tool that:
+1. Validates your database settings.
+2. Generates a custom `docker/Dockerfile` to compile PHP 8.2 with the exact PDO extensions required by your driver.
+3. Configures an Nginx container (`docker/nginx.conf`) to handle URL rewriting.
+4. Generates a tailored `docker/docker-compose.yml` and starts the containers.
+
+Once running, PachyBase is accessible at **`http://localhost:8080`**.

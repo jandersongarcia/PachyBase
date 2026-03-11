@@ -44,7 +44,7 @@ final class ErrorHandler
 
             ApiResponse::error(
                 'FATAL_ERROR',
-                'A fatal error interrupted the request.',
+                self::errorMessage('A fatal error interrupted the request.'),
                 500,
                 self::debugDetails(
                     $error['message'],
@@ -61,23 +61,24 @@ final class ErrorHandler
     {
         ApiResponse::error(
             'INTERNAL_SERVER_ERROR',
-            self::userMessage(),
+            self::errorMessage($exception->getMessage()),
             500,
             self::debugDetails(
                 $exception->getMessage(),
                 $exception->getFile(),
                 $exception->getLine(),
-                $exception::class
+                $exception::class,
+                $exception->getTrace()
             ),
             [],
             'server_error'
         );
     }
 
-    private static function userMessage(): string
+    private static function errorMessage(string $developmentMessage): string
     {
         return self::debugEnabled()
-            ? 'The request failed with an internal exception.'
+            ? $developmentMessage
             : 'An unexpected internal error occurred.';
     }
 
@@ -85,7 +86,8 @@ final class ErrorHandler
         string $message,
         string $file,
         int $line,
-        ?string $exceptionClass = null
+        ?string $exceptionClass = null,
+        array $trace = []
     ): array {
         if (!self::debugEnabled()) {
             return [];
@@ -101,17 +103,15 @@ final class ErrorHandler
             $details['exception'] = $exceptionClass;
         }
 
+        if ($trace !== []) {
+            $details['trace'] = $trace;
+        }
+
         return [$details];
     }
 
     private static function debugEnabled(): bool
     {
-        $value = Config::get('APP_DEBUG', false);
-
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'on'], true);
+        return Config::debugEnabled();
     }
 }
