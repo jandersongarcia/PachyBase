@@ -21,3 +21,8 @@ composer.phar
 # OS System Files
 .DS_Store
 Thumbs.db
+
+# Docs Site (Docusaurus)
+/docs-site/node_modules/
+/docs-site/build/
+/docs-site/.docusaurus/

@@ -10,9 +10,10 @@ const config: Config = {
     v4: true,
   },
   url: 'https://jandersongarcia.github.io',
-  baseUrl: '/',
+  baseUrl: '/pachybase/',
   organizationName: 'jandersongarcia',
   projectName: 'pachybase',
+  trailingSlash: false,
   onBrokenLinks: 'throw',
   i18n: {
     defaultLocale: 'en',
