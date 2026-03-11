@@ -22,5 +22,5 @@ This page lists the main libraries currently used by PachyBase and its documenta
 
 ## Source references
 
-- Backend dependencies: [`composer.json`](../../../composer.json)
-- Docs dependencies: [`package.json`](../package.json)
+- Backend dependencies: [composer.json](https://github.com/jandersongarcia/pachybase/blob/main/composer.json)
+- Docs dependencies: [docs-site/package.json](https://github.com/jandersongarcia/pachybase/blob/main/docs-site/package.json)

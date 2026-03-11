@@ -22,5 +22,5 @@ Esta pagina lista as principais bibliotecas atualmente usadas pelo PachyBase e p
 
 ## Referencias no codigo-fonte
 
-- Dependencias do backend: [`composer.json`](../../../composer.json)
-- Dependencias da docs: [`package.json`](../package.json)
+- Dependencias do backend: [composer.json](https://github.com/jandersongarcia/pachybase/blob/main/composer.json)
+- Dependencias da docs: [docs-site/package.json](https://github.com/jandersongarcia/pachybase/blob/main/docs-site/package.json)
