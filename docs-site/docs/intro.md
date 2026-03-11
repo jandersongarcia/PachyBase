@@ -25,7 +25,9 @@ PachyBase is a self-hosted PHP backend foundation focused on predictable JSON AP
 
 ## Documentation map
 
+- [Install](./install.md)
 - [API Contract](./api-contract.md)
+- [Libraries](./libraries.md)
 - [Docker Install](./docker-install.md)
 
 ## Run the docs site locally

@@ -8,6 +8,8 @@ sidebar_position: 3
 
 PachyBase can provision its local Docker stack directly from Composer.
 
+Before running the Docker installer, get the source code from [GitHub](https://github.com/jandersongarcia/pachybase) or the [project ZIP download](https://github.com/jandersongarcia/pachybase/archive/refs/heads/main.zip).
+
 ## Required `.env` values
 
 ```env

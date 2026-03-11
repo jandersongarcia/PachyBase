@@ -9,10 +9,10 @@ const config: Config = {
   future: {
     v4: true,
   },
-  url: 'https://pachybase.example.com',
+  url: 'https://jandersongarcia.github.io',
   baseUrl: '/',
   organizationName: 'jandersongarcia',
-  projectName: 'PachyBase',
+  projectName: 'pachybase',
   onBrokenLinks: 'throw',
   i18n: {
     defaultLocale: 'en',
@@ -24,7 +24,7 @@ const config: Config = {
       },
       'pt-BR': {
         htmlLang: 'pt-BR',
-        label: 'Português (Brasil)',
+        label: 'Portugues (Brasil)',
       },
     },
   },
@@ -36,7 +36,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
           editUrl:
-            'https://github.com/jandersongarcia/PachyBase/tree/main/docs-site/',
+            'https://github.com/jandersongarcia/pachybase/tree/main/docs-site/',
         },
         blog: false,
         theme: {
@@ -64,11 +64,26 @@ const config: Config = {
           label: 'Documentation',
         },
         {
+          to: '/install',
+          label: 'Install',
+          position: 'left',
+        },
+        {
+          to: '/libraries',
+          label: 'Libraries',
+          position: 'left',
+        },
+        {
           type: 'localeDropdown',
           position: 'right',
         },
         {
-          href: 'https://github.com/jandersongarcia/PachyBase',
+          href: 'https://github.com/jandersongarcia/pachybase/archive/refs/heads/main.zip',
+          label: 'Download ZIP',
+          position: 'right',
+        },
+        {
+          href: 'https://github.com/jandersongarcia/pachybase',
           label: 'GitHub',
           position: 'right',
         },
@@ -88,14 +103,26 @@ const config: Config = {
               label: 'API Contract',
               to: '/api-contract',
             },
+            {
+              label: 'Libraries',
+              to: '/libraries',
+            },
           ],
         },
         {
           title: 'Project',
           items: [
             {
+              label: 'Install',
+              to: '/install',
+            },
+            {
               label: 'Docker install',
               to: '/docker-install',
+            },
+            {
+              label: 'Download ZIP',
+              href: 'https://github.com/jandersongarcia/pachybase/archive/refs/heads/main.zip',
             },
           ],
         },
@@ -104,7 +131,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/jandersongarcia/PachyBase',
+              href: 'https://github.com/jandersongarcia/pachybase',
             },
           ],
         },

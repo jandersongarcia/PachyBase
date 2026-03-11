@@ -1,38 +1,40 @@
 ---
 id: intro
-title: Visão Geral
+title: Visao Geral
 slug: /
 sidebar_position: 1
 ---
 
 # PachyBase
 
-PachyBase é uma base backend self-hosted em PHP focada em APIs JSON previsíveis, setup local com Docker e contratos legíveis por máquina, seguros para humanos e para IA consumirem.
+PachyBase e uma base backend self-hosted em PHP focada em APIs JSON previsiveis, setup local com Docker e contratos legiveis por maquina, seguros para humanos e para IA consumirem.
 
 ## O que o projeto faz hoje
 
-- Carrega configurações da aplicação e do banco a partir do `.env`.
-- Expõe um endpoint de status por meio de `public/index.php`.
+- Carrega configuracoes da aplicacao e do banco a partir do `.env`.
+- Expoe um endpoint de status por meio de `public/index.php`.
 - Usa um contrato JSON centralizado para respostas de sucesso e erro.
-- Instala os serviços Docker via Composer com base no banco configurado.
+- Instala os servicos Docker via Composer com base no banco configurado.
 
-## Princípios atuais
+## Principios atuais
 
-- Respostas previsíveis com um contrato externo fixo.
+- Respostas previsiveis com um contrato externo fixo.
 - Desenvolvimento local simples com Docker.
-- Pontos claros de extensão para rotas, módulos e geração de CRUD.
-- Documentação disponível em inglês e português do Brasil.
+- Pontos claros de extensao para rotas, modulos e geracao de CRUD.
+- Documentacao que pode ser consumida em ingles e portugues do Brasil.
 
-## Mapa da documentação
+## Mapa da documentacao
 
+- [Instalacao](./install.md)
 - [Contrato da API](./api-contract.md)
-- [Instalação Docker](./docker-install.md)
+- [Bibliotecas](./libraries.md)
+- [Instalacao Docker](./docker-install.md)
 
-## Rodando o site de documentação localmente
+## Rodando o site de documentacao localmente
 
 ```bash
 npm install
 npm run start
 ```
 
-Por padrão, a documentação abre em inglês. Use o seletor de idioma na navegação superior para alternar para `pt-BR`.
+Por padrao, a documentacao abre em ingles. Use o seletor de idioma na navegacao superior para alternar para `pt-BR`.
