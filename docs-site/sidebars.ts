@@ -5,6 +5,7 @@ const sidebars: SidebarsConfig = {
     'intro',
     'install',
     'api-contract',
+    'openapi',
     'libraries',
     {
       type: 'category',

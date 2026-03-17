@@ -130,9 +130,13 @@ Authorization failures must use HTTP `403` when the caller is authenticated but 
 - Responses never switch between JSON, HTML, and plain text depending on the failure mode.
 - New endpoints must return through `core/Http/ApiResponse.php`.
 - Contract tests must be added for every new endpoint shape.
+- Runtime layers outside `core/Http/ApiResponse.php` must not emit raw HTTP output directly.
 
 ## Current implementation
 
 - `core/Http/ApiResponse.php` formats successful and failed responses.
 - `core/Http/ErrorHandler.php` converts exceptions and PHP errors into the same contract.
-- `public/index.php` already uses this shared response layer.
+- `public/index.php` delegates request handling to the modular bootstrap and kernel.
+- `routes/api.php` centralizes HTTP route registration.
+- `api/Controllers/` and `services/` keep endpoint orchestration separate from business logic.
+- `tests/Architecture/ApiContractEnforcementTest.php` blocks manual output logic in runtime layers.

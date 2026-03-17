@@ -69,19 +69,18 @@ class RouterTest extends TestCase
     {
         $router = new Router();
         $order = [];
+        $middleware = new class {
+            public function handle(Request $request, callable $next): void
+            {
+                $next();
+            }
+        };
 
         $router->get('/guarded', function (Request $req) use (&$order): void {
             $order[] = 'handler';
-        })->middleware([new class {
-            public function handle(Request $request, callable $next): void
-            {
-                // We can't use $order here directly, but this validates the pipeline runs
-                $next();
-            }
-        }::class]);
+        })->middleware([get_class($middleware)]);
 
-        // Just verify no exception is thrown (middleware runs and calls next)
         $router->dispatch($this->makeRequest('GET', '/guarded'));
-        $this->addToAssertionCount(1);
+        $this->assertSame(['handler'], $order);
     }
 }

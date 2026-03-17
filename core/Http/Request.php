@@ -11,6 +11,7 @@ class Request
     private array $query;
     private array $headers;
     private array $body;
+    private array $attributes = [];
 
     public function __construct(
         string $method,
@@ -119,5 +120,21 @@ class Request
             }
         }
         return $default;
+    }
+
+    public function attribute(?string $key = null, mixed $default = null): mixed
+    {
+        if ($key === null) {
+            return $this->attributes;
+        }
+
+        return $this->attributes[$key] ?? $default;
+    }
+
+    public function setAttribute(string $key, mixed $value): self
+    {
+        $this->attributes[$key] = $value;
+
+        return $this;
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Http;
 
+use PachyBase\Api\Controllers\SystemController;
 use PachyBase\Config;
-use PachyBase\Controllers\SystemController;
 use PachyBase\Database\Connection;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;

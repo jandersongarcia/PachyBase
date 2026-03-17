@@ -60,5 +60,21 @@ Os instaladores executam o mesmo fluxo:
 3. Fazem o build da imagem PHP com Composer disponivel dentro do Docker.
 4. Executam `composer install` dentro do container PHP.
 5. Sobem os containers.
+6. Esperam o banco ficar pronto.
+7. Executam automaticamente as migrations e seeds padrao.
+
+Depois que o instalador termina, o ambiente local ja inclui:
+
+- a tabela de controle de migrations
+- a tabela de controle de seeds
+- as tabelas-base do sistema
+- os dados iniciais padrao
+
+Para reconstruir o ambiente local completo sem trabalho manual no banco:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v
+./install.sh
+```
 
 Depois que o codigo estiver localmente disponivel, siga para [Instalacao Docker](./docker-install.md).

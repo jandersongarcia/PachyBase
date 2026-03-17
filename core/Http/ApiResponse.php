@@ -111,6 +111,11 @@ final class ApiResponse
         ], $statusCode);
     }
 
+    public static function document(array $document, int $statusCode = 200): never
+    {
+        self::sendDocument($document, $statusCode);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $details
      */
@@ -226,6 +231,38 @@ final class ApiResponse
             echo json_encode($fallbackPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 
             exit;
+        }
+
+        echo $json;
+        exit;
+    }
+
+    private static function sendDocument(array $document, int $statusCode): never
+    {
+        if (self::$captureEnabled) {
+            self::$capturedStatusCode = $statusCode;
+            self::$capturedPayload = $document;
+
+            throw new ResponseCaptured($statusCode, $document);
+        }
+
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+
+        $json = json_encode(
+            $document,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+        );
+
+        if ($json === false) {
+            self::error(
+                'RESPONSE_ENCODING_ERROR',
+                'The API response could not be encoded as JSON.',
+                500,
+                [],
+                [],
+                'server_error'
+            );
         }
 
         echo $json;

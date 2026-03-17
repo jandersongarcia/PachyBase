@@ -9,27 +9,28 @@ use PDO;
 use PDOException;
 use RuntimeException;
 
-/**
- * PDO Connection singleton.
- *
- * Usage:
- *   $pdo = Connection::getInstance()->getPDO();
- *
- * Supported drivers: mysql, pgsql
- */
 final class Connection
 {
     private static ?self $instance = null;
     private PDO $pdo;
+    private string $driver;
+    private string $database;
+    private string $schema;
 
     private function __construct()
     {
-        $driver   = Config::get('DB_DRIVER', 'mysql');
-        $host     = Config::get('DB_HOST', '127.0.0.1');
-        $port     = Config::get('DB_PORT', '3306');
+        $driver = strtolower((string) Config::get('DB_DRIVER', 'mysql'));
+        $host = Config::get('DB_HOST', '127.0.0.1');
+        $port = Config::get('DB_PORT', '3306');
         $database = Config::get('DB_DATABASE', 'pachybase');
         $username = Config::get('DB_USERNAME', 'root');
         $password = Config::get('DB_PASSWORD', '');
+
+        $this->driver = $driver;
+        $this->database = (string) $database;
+        $this->schema = $driver === 'pgsql'
+            ? (string) Config::get('DB_SCHEMA', 'public')
+            : $this->database;
 
         $dsn = match ($driver) {
             'mysql' => sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $database),
@@ -41,16 +42,12 @@ final class Connection
 
         try {
             $this->pdo = new PDO($dsn, $username, $password, [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::ATTR_EMULATE_PREPARES => false,
             ]);
-        } catch (PDOException $e) {
-            throw new RuntimeException(
-                'Database connection failed.',
-                500,
-                $e
-            );
+        } catch (PDOException $exception) {
+            throw new RuntimeException('Database connection failed.', 500, $exception);
         }
     }
 
@@ -68,14 +65,27 @@ final class Connection
         return $this->pdo;
     }
 
-    /**
-     * Reset the singleton (useful in tests).
-     */
+    public function driver(): string
+    {
+        return $this->driver;
+    }
+
+    public function database(): string
+    {
+        return $this->database;
+    }
+
+    public function schema(): string
+    {
+        return $this->schema;
+    }
+
     public static function reset(): void
     {
         self::$instance = null;
     }
 
-    // Prevent cloning and unserialization
-    private function __clone() {}
+    private function __clone()
+    {
+    }
 }

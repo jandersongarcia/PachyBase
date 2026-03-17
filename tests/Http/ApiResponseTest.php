@@ -97,4 +97,52 @@ class ApiResponseTest extends TestCase
             $this->assertSame('required', $payload['error']['details'][0]['code']);
         }
     }
+
+    public function testAuthenticationErrorUsesOfficialContractShape(): void
+    {
+        ApiResponse::enableCapture();
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/private';
+
+        try {
+            ApiResponse::authenticationError();
+            $this->fail('Expected captured response.');
+        } catch (ResponseCaptured $captured) {
+            $payload = $captured->getPayload();
+
+            $this->assertSame(401, $captured->getStatusCode());
+            $this->assertFalse($payload['success']);
+            $this->assertSame('AUTHENTICATION_REQUIRED', $payload['error']['code']);
+            $this->assertSame('authentication_error', $payload['error']['type']);
+            $this->assertSame('Authentication is required to access this resource.', $payload['error']['message']);
+            $this->assertArrayHasKey('request_id', $payload['meta']);
+            $this->assertArrayHasKey('timestamp', $payload['meta']);
+            $this->assertSame('GET', $payload['meta']['method']);
+            $this->assertSame('/private', $payload['meta']['path']);
+        }
+    }
+
+    public function testAuthorizationErrorUsesOfficialContractShape(): void
+    {
+        ApiResponse::enableCapture();
+        $_SERVER['REQUEST_METHOD'] = 'DELETE';
+        $_SERVER['REQUEST_URI'] = '/admin/users/7';
+
+        try {
+            ApiResponse::authorizationError();
+            $this->fail('Expected captured response.');
+        } catch (ResponseCaptured $captured) {
+            $payload = $captured->getPayload();
+
+            $this->assertSame(403, $captured->getStatusCode());
+            $this->assertFalse($payload['success']);
+            $this->assertSame('INSUFFICIENT_PERMISSIONS', $payload['error']['code']);
+            $this->assertSame('authorization_error', $payload['error']['type']);
+            $this->assertSame('You do not have permission to access this resource.', $payload['error']['message']);
+            $this->assertArrayHasKey('request_id', $payload['meta']);
+            $this->assertArrayHasKey('timestamp', $payload['meta']);
+            $this->assertSame('DELETE', $payload['meta']['method']);
+            $this->assertSame('/admin/users/7', $payload['meta']['path']);
+        }
+    }
 }

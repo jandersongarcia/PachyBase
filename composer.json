@@ -10,6 +10,13 @@
   },
   "autoload": {
     "psr-4": {
+      "PachyBase\\Api\\": "api/",
+      "PachyBase\\Auth\\": "auth/",
+      "PachyBase\\Config\\": "config/",
+      "PachyBase\\Database\\": "database/",
+      "PachyBase\\Modules\\": "modules/",
+      "PachyBase\\Services\\": "services/",
+      "PachyBase\\Utils\\": "utils/",
       "PachyBase\\": "core/"
     }
   },
@@ -20,7 +27,14 @@
   },
   "scripts": {
     "docker-install": "@php scripts/docker-install.php",
-    "test": "phpunit --testdox"
+    "test": "phpunit --testdox",
+    "db:inspect:entities": "@php scripts/inspect-entities.php",
+    "migrations:status": "@php scripts/migrate.php status",
+    "migrate": "@php scripts/migrate.php up",
+    "migrations:rollback": "@php scripts/migrate.php down",
+    "db:seed:status": "@php scripts/seed.php status",
+    "db:seed": "@php scripts/seed.php run",
+    "db:bootstrap": "@php scripts/bootstrap-database.php"
   }
 }
 

@@ -43,6 +43,14 @@ class Router
         return $route;
     }
 
+    /**
+     * @return array<int, Route>
+     */
+    public function routes(): array
+    {
+        return $this->routes;
+    }
+
     public function dispatch(Request $request): void
     {
         $method = $request->getMethod();

@@ -56,6 +56,8 @@ The installer performs these steps:
 3. Builds the PHP image with Composer available inside the container.
 4. Runs `composer install` inside the PHP container.
 5. Starts the containers with `docker compose up -d`.
+6. Waits for the database to become ready.
+7. Runs the default migrations and seeds automatically.
 
 ## Configuration notes
 
@@ -66,4 +68,10 @@ After installation, you can manage the stack with Docker Compose:
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml down
+```
+
+You can also re-run the database bootstrap manually when needed:
+
+```bash
+docker compose -f docker/docker-compose.yml exec php php scripts/bootstrap-database.php
 ```

@@ -221,6 +221,17 @@ function Invoke-DockerCompose {
     }
 }
 
+function Bootstrap-Database {
+    Write-Step "Bootstrapping database schema and seeds"
+    Invoke-DockerCompose -Arguments @(
+        "exec",
+        "-T",
+        "php",
+        "php",
+        "scripts/bootstrap-database.php"
+    )
+}
+
 Write-Step "Validating required tools"
 Assert-Command -Command "docker" -Arguments @("--version") -Label "Docker"
 Assert-Command -Command "docker" -Arguments @("compose", "version") -Label "Docker Compose"
@@ -259,6 +270,8 @@ Invoke-DockerCompose -Arguments @(
 
 Write-Step "Starting containers"
 Invoke-DockerCompose -Arguments @("up", "-d")
+
+Bootstrap-Database
 
 Write-Host ""
 Write-Host "PachyBase is available at http://localhost:8080"

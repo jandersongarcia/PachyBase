@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+namespace PachyBase\Api\Controllers;
+
+use PachyBase\Auth\AuthorizationService;
+use PachyBase\Http\ApiResponse;
+use PachyBase\Http\Request;
+use PachyBase\Services\Crud\EntityCrudService;
+
+final class CrudController
+{
+    public function __construct(
+        private readonly ?EntityCrudService $service = null,
+        private readonly ?AuthorizationService $authorization = null
+    ) {
+    }
+
+    public function index(Request $request, string $entity): void
+    {
+        $this->authorize($request, $entity, 'read');
+        $result = ($this->service ?? new EntityCrudService())->list($entity, $request);
+
+        ApiResponse::paginated(
+            $result['items'],
+            $result['total'],
+            $result['page'],
+            $result['per_page'],
+            [
+                'resource' => 'crud.index',
+                'entity' => $result['entity'],
+            ]
+        );
+    }
+
+    public function show(Request $request, string $entity, string $id): void
+    {
+        $this->authorize($request, $entity, 'read');
+        ApiResponse::success(
+            ($this->service ?? new EntityCrudService())->show($entity, $id),
+            [
+                'resource' => 'crud.show',
+                'entity' => $entity,
+            ]
+        );
+    }
+
+    public function store(Request $request, string $entity): void
+    {
+        $this->authorize($request, $entity, 'create');
+        ApiResponse::success(
+            ($this->service ?? new EntityCrudService())->create($entity, $request->json()),
+            [
+                'resource' => 'crud.store',
+                'entity' => $entity,
+            ],
+            201
+        );
+    }
+
+    public function replace(Request $request, string $entity, string $id): void
+    {
+        $this->authorize($request, $entity, 'update');
+        ApiResponse::success(
+            ($this->service ?? new EntityCrudService())->replace($entity, $id, $request->json()),
+            [
+                'resource' => 'crud.replace',
+                'entity' => $entity,
+            ]
+        );
+    }
+
+    public function update(Request $request, string $entity, string $id): void
+    {
+        $this->authorize($request, $entity, 'update');
+        ApiResponse::success(
+            ($this->service ?? new EntityCrudService())->patch($entity, $id, $request->json()),
+            [
+                'resource' => 'crud.update',
+                'entity' => $entity,
+            ]
+        );
+    }
+
+    public function destroy(Request $request, string $entity, string $id): void
+    {
+        $this->authorize($request, $entity, 'delete');
+        ApiResponse::success(
+            ($this->service ?? new EntityCrudService())->delete($entity, $id),
+            [
+                'resource' => 'crud.destroy',
+                'entity' => $entity,
+            ]
+        );
+    }
+
+    private function authorize(Request $request, string $entity, string $action): void
+    {
+        ($this->authorization ?? new AuthorizationService())->authorizeEntityAction($request, $entity, $action);
+    }
+}

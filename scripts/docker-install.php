@@ -42,6 +42,7 @@ function main(array $argv, string $rootPath, string $envPath, string $composePat
     );
 
     runCommand($command, 'Unable to start Docker containers.');
+    bootstrapDatabase($composePath);
 
     output('PachyBase is running at http://localhost:8080');
 }
@@ -254,6 +255,16 @@ function runCommand(string $command, string $errorMessage): void
     if ($exitCode !== 0) {
         fail($errorMessage);
     }
+}
+
+function bootstrapDatabase(string $composePath): void
+{
+    $command = sprintf(
+        'docker compose -f %s exec -T php php scripts/bootstrap-database.php',
+        escapeshellarg($composePath)
+    );
+
+    runCommand($command, 'Unable to bootstrap the database schema and seeds.');
 }
 
 function output(string $message): void
