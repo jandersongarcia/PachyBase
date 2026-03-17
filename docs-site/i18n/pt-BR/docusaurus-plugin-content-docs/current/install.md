@@ -26,6 +26,17 @@ cd pachybase
 2. Extraia os arquivos do projeto.
 3. Abra a pasta extraida.
 
+## Fluxo recomendado
+
+A entrada preferencial agora e a CLI do projeto:
+
+```bash
+./pachybase env:init
+./pachybase install
+```
+
+No Windows, troque `./pachybase` por `.\pachybase.bat`.
+
 ## Etapa manual obrigatoria
 
 Antes de rodar o instalador, crie `.env` a partir de `.env.example` e preencha as configuracoes do banco. Essa etapa e obrigatoria porque `DB_DRIVER` define qual container de banco sera gerado durante o setup.
@@ -77,4 +88,4 @@ docker compose -f docker/docker-compose.yml down -v
 ./install.sh
 ```
 
-Depois que o codigo estiver localmente disponivel, siga para [Instalacao Docker](./docker-install.md).
+Depois que o codigo estiver localmente disponivel, siga para [CLI](./cli.md) e [Instalacao Docker](./docker-install.md).

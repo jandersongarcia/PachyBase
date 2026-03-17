@@ -25,6 +25,9 @@ class DockerInstallTest extends TestCase
         $databaseSection = explode("  db:\n", str_replace("\r\n", "\n", $compose), 2)[1] ?? '';
 
         $this->assertStringNotContainsString('"3306:3306"', $compose);
+        $this->assertStringContainsString("context: ..", $compose);
+        $this->assertStringContainsString("dockerfile: docker/Dockerfile", $compose);
+        $this->assertStringContainsString('image: nginx:1.27-alpine', $compose);
         $this->assertStringNotContainsString("\n    ports:\n", $databaseSection);
     }
 
@@ -39,5 +42,19 @@ class DockerInstallTest extends TestCase
 
         $this->assertStringContainsString('MYSQL_USER: "pachybase"', $service['environment']);
         $this->assertStringContainsString('MYSQL_PASSWORD: "change_this_password"', $service['environment']);
+    }
+
+    public function testBuildDatabaseServiceCreatesPostgresEnvironment(): void
+    {
+        $service = buildDatabaseService([
+            'DB_DRIVER' => 'pgsql',
+            'DB_DATABASE' => 'pachybase',
+            'DB_USERNAME' => 'pachybase',
+            'DB_PASSWORD' => 'change_this_password',
+        ]);
+
+        $this->assertStringContainsString('POSTGRES_DB: "pachybase"', $service['environment']);
+        $this->assertStringContainsString('POSTGRES_USER: "pachybase"', $service['environment']);
+        $this->assertStringContainsString('POSTGRES_PASSWORD: "change_this_password"', $service['environment']);
     }
 }

@@ -6,6 +6,7 @@ namespace Tests\Services\OpenApi;
 
 use PachyBase\Config;
 use PachyBase\Database\Connection;
+use PachyBase\Release\ProjectMetadata;
 use PachyBase\Services\OpenApi\OpenApiDocumentBuilder;
 use PHPUnit\Framework\TestCase;
 
@@ -30,8 +31,12 @@ class OpenApiDocumentBuilderTest extends TestCase
         $document = (new OpenApiDocumentBuilder())->build();
 
         $this->assertSame('3.0.3', $document['openapi']);
+        $this->assertSame(ProjectMetadata::version(), $document['info']['version']);
         $this->assertSame('http://localhost:8080', $document['servers'][0]['url']);
         $this->assertArrayHasKey('/openapi.json', $document['paths']);
+        $this->assertArrayHasKey('/ai/schema', $document['paths']);
+        $this->assertArrayHasKey('/ai/entities', $document['paths']);
+        $this->assertArrayHasKey('/ai/entity/{name}', $document['paths']);
         $this->assertArrayHasKey('/api/auth/login', $document['paths']);
         $this->assertArrayHasKey('/api/system-settings', $document['paths']);
         $this->assertArrayHasKey('/api/system-settings/{id}', $document['paths']);
@@ -49,6 +54,10 @@ class OpenApiDocumentBuilderTest extends TestCase
         $this->assertArrayNotHasKey(
             'token_hash',
             $document['components']['schemas']['CrudApiTokensItem']['properties']
+        );
+        $this->assertSame(
+            'Read the AI-friendly schema document',
+            $document['paths']['/ai/schema']['get']['summary']
         );
     }
 

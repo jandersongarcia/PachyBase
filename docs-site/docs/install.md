@@ -26,6 +26,18 @@ cd pachybase
 2. Extract the project files.
 3. Open the extracted folder.
 
+## Recommended flow
+
+The preferred entrypoint is the project CLI:
+
+```bash
+./pachybase env:init
+./pachybase install
+./pachybase doctor
+```
+
+On Windows, replace `./pachybase` with `.\pachybase.bat`.
+
 ## Required manual step
 
 Before running the installer, create `.env` from `.env.example` and fill in the database settings. This step is mandatory because `DB_DRIVER` determines which database container will be generated during setup.
@@ -77,4 +89,6 @@ docker compose -f docker/docker-compose.yml down -v
 ./install.sh
 ```
 
-After the source code is available locally, continue with [Docker Install](./docker-install.md) for more details about the Docker flow.
+After the source code is available locally, continue with [CLI](./cli.md) and [Docker Install](./docker-install.md) for more details about the operational flow.
+
+Before sharing the environment with other developers or publishing a release candidate, run `./pachybase doctor` to validate the runtime posture.

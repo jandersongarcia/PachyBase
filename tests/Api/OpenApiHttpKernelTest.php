@@ -43,6 +43,7 @@ class OpenApiHttpKernelTest extends TestCase
 
             $this->assertSame(200, $captured->getStatusCode());
             $this->assertSame('3.0.3', $payload['openapi']);
+            $this->assertArrayHasKey('/ai/schema', $payload['paths']);
             $this->assertArrayHasKey('/api/auth/login', $payload['paths']);
             $this->assertArrayHasKey('/api/system-settings', $payload['paths']);
             $this->assertArrayHasKey('bearerAuth', $payload['components']['securitySchemes']);

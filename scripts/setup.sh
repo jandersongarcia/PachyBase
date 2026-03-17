@@ -6,6 +6,7 @@ ENV_EXAMPLE_PATH="$ROOT_DIR/.env.example"
 ENV_PATH="$ROOT_DIR/.env"
 COMPOSE_PATH="$ROOT_DIR/docker/docker-compose.yml"
 DOCKERFILE_PATH="$ROOT_DIR/docker/Dockerfile"
+MODE="${1:-install}"
 
 step() {
   printf '\n==> %s\n' "$1"
@@ -135,7 +136,7 @@ EOF
   cat >"$COMPOSE_PATH" <<EOF
 services:
   web:
-    image: nginx:latest
+    image: nginx:1.27-alpine
     ports:
       - "8080:80"
     volumes:
@@ -199,6 +200,11 @@ invoke_docker_compose build php
 
 step "Installing Composer dependencies inside the PHP container"
 invoke_docker_compose run --rm --no-deps php composer install --no-interaction
+
+if [[ "$MODE" == "docker-install" ]]; then
+  printf '\n%s\n' "Docker environment prepared successfully."
+  exit 0
+fi
 
 step "Starting containers"
 invoke_docker_compose up -d

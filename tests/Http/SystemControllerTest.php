@@ -10,6 +10,7 @@ use PachyBase\Database\Connection;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;
 use PachyBase\Http\ResponseCaptured;
+use PachyBase\Release\ProjectMetadata;
 use PHPUnit\Framework\TestCase;
 
 class SystemControllerTest extends TestCase
@@ -49,6 +50,7 @@ class SystemControllerTest extends TestCase
             $payload = $captured->getPayload();
 
             $this->assertArrayHasKey('database', $payload['data']);
+            $this->assertSame(ProjectMetadata::version(), $payload['data']['version']);
             $this->assertSame('mysql', $payload['data']['database']['driver']);
             $this->assertArrayNotHasKey('host', $payload['data']['database']);
             $this->assertArrayNotHasKey('port', $payload['data']['database']);

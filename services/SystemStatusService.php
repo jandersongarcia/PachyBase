@@ -8,6 +8,7 @@ use PachyBase\Config;
 use PachyBase\Database\AdapterFactory;
 use PachyBase\Database\Connection;
 use PachyBase\Http\Request;
+use PachyBase\Release\ProjectMetadata;
 use RuntimeException;
 
 final class SystemStatusService
@@ -17,7 +18,7 @@ final class SystemStatusService
         $data = [
             'name' => Config::get('APP_NAME', 'PachyBase'),
             'status' => 'running',
-            'version' => '1.0.0',
+            'version' => ProjectMetadata::version(),
         ];
 
         if (!Config::isProduction()) {
