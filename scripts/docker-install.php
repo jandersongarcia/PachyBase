@@ -175,11 +175,9 @@ function buildDockerCompose(array $config): string
     $databaseService = buildDatabaseService($config);
 
     return implode(PHP_EOL, [
-        'version: "3.9"',
-        '',
         'services:',
         '  web:',
-        '    image: nginx:latest',
+        '    image: nginx:1.27-alpine',
         '    ports:',
         '      - "8080:80"',
         '    volumes:',
@@ -190,8 +188,9 @@ function buildDockerCompose(array $config): string
         '',
         '  php:',
         '    build:',
-        '      context: .',
-        '      dockerfile: Dockerfile',
+        '      context: ..',
+        '      dockerfile: docker/Dockerfile',
+        '    working_dir: /var/www/html',
         '    volumes:',
         '      - ../:/var/www/html',
         '    depends_on:',

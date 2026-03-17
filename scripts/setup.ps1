@@ -1,4 +1,7 @@
-param()
+param(
+    [ValidateSet("install", "docker-install")]
+    [string] $Mode = "install"
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -174,7 +177,7 @@ function Write-DockerComposeFile {
     $compose = @(
         'services:',
         '  web:',
-        '    image: nginx:latest',
+        '    image: nginx:1.27-alpine',
         '    ports:',
         '      - "8080:80"',
         '    volumes:',
@@ -267,6 +270,12 @@ Invoke-DockerCompose -Arguments @(
     "install",
     "--no-interaction"
 )
+
+if ($Mode -eq "docker-install") {
+    Write-Host ""
+    Write-Host "Docker environment prepared successfully."
+    exit 0
+}
 
 Write-Step "Starting containers"
 Invoke-DockerCompose -Arguments @("up", "-d")

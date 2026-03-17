@@ -9,29 +9,64 @@ sidebar_position: 1
 
 PachyBase is a self-hosted PHP backend foundation focused on predictable JSON APIs, Docker-first local setup, and machine-readable contracts that are safe for humans and AI to consume.
 
-## What the project does today
+## What a new developer can do today
 
-- Loads application and database configuration from `.env`.
-- Exposes a health/status endpoint through a modular HTTP kernel.
-- Uses a centralized JSON response contract for success and failure.
-- Installs Docker services from Composer based on the configured database driver.
+- Install the stack with Docker and one project CLI
+- Configure the app through `.env` and declarative PHP config files
+- Run automatic CRUD for exposed entities without hand-writing controllers
+- Authenticate with JWT access tokens or API tokens
+- Publish OpenAPI and AI-friendly schema documents from the live runtime
+- Run tests, inspect entities, sync CRUD config, and bootstrap the database from the CLI
 
 ## Current principles
 
-- Predictable API responses with a fixed outer contract.
-- Simple local development with Docker.
-- Clear extension points for routing, modules, and CRUD generation.
-- Documentation that can be consumed in English and Brazilian Portuguese.
+- Predictable API responses with a fixed outer contract
+- Simple local development with Docker
+- Clear extension points for routing, modules, and CRUD generation
+- Documentation that can be consumed in English and Brazilian Portuguese
+
+## Quick start
+
+```bash
+cp .env.example .env
+./pachybase install
+```
+
+On Windows, use `Copy-Item .env.example .env` and `.\pachybase.bat install`.
+
+After the stack is ready:
+
+- API base URL: `http://localhost:8080`
+- OpenAPI document: `http://localhost:8080/openapi.json`
+- AI schema: `http://localhost:8080/ai/schema`
+- Development admin login: `admin@pachybase.local` / `pachybase123`
 
 ## Documentation map
 
+### Product and setup
+
 - [Install](./install.md)
+- [Configuration](./configuration.md)
+- [Supported Databases](./supported-databases.md)
 - [Architecture](./architecture.md)
+
+### API and integrations
+
 - [API Contract](./api-contract.md)
-- [Database Layer](./database-layer.md)
-- [Contract Enforcement](./contract-enforcement.md)
-- [Libraries](./libraries.md)
+- [Authentication and Authorization](./auth-security.md)
+- [Automatic CRUD](./automatic-crud.md)
+- [Filters and Pagination](./filters-pagination.md)
+- [OpenAPI](./openapi.md)
+- [AI Endpoints](./ai-endpoints.md)
+
+### Tooling and maintenance
+
+- [CLI](./cli.md)
+- [Testing](./testing.md)
 - [Docker Install](./docker-install.md)
+- [Examples](./examples.md)
+- [Contributing](./contributing.md)
+- [Roadmap](./roadmap.md)
 
 ## Run the docs site locally
 
@@ -41,4 +76,3 @@ npm run start
 ```
 
 By default, the documentation opens in English. Use the locale selector in the top navigation to switch to `pt-BR`.
-

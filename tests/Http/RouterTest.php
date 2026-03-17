@@ -68,19 +68,60 @@ class RouterTest extends TestCase
     public function testMiddlewareIsCalledBeforeHandler(): void
     {
         $router = new Router();
-        $order = [];
-        $middleware = new class {
-            public function handle(Request $request, callable $next): void
-            {
-                $next();
-            }
-        };
+        RouterMiddlewareRecorder::$events = [];
 
-        $router->get('/guarded', function (Request $req) use (&$order): void {
-            $order[] = 'handler';
-        })->middleware([get_class($middleware)]);
+        $router->get('/guarded', function (Request $req): void {
+            RouterMiddlewareRecorder::$events[] = 'handler';
+            $req->setAttribute('handled', true);
+        })->middleware([FirstRouterMiddleware::class, SecondRouterMiddleware::class]);
 
         $router->dispatch($this->makeRequest('GET', '/guarded'));
-        $this->assertSame(['handler'], $order);
+
+        $this->assertSame([
+            'first:before',
+            'second:before',
+            'handler',
+            'second:after',
+            'first:after',
+        ], RouterMiddlewareRecorder::$events);
+    }
+
+    public function testThrowsRuntimeExceptionForInvalidArrayHandler(): void
+    {
+        $router = new Router();
+        $router->get('/broken', ['MissingController', 'missingMethod']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Invalid route handler');
+
+        $router->dispatch($this->makeRequest('GET', '/broken'));
+    }
+}
+
+final class RouterMiddlewareRecorder
+{
+    /**
+     * @var list<string>
+     */
+    public static array $events = [];
+}
+
+final class FirstRouterMiddleware
+{
+    public function handle(Request $request, callable $next): void
+    {
+        RouterMiddlewareRecorder::$events[] = 'first:before';
+        $next();
+        RouterMiddlewareRecorder::$events[] = 'first:after';
+    }
+}
+
+final class SecondRouterMiddleware
+{
+    public function handle(Request $request, callable $next): void
+    {
+        RouterMiddlewareRecorder::$events[] = 'second:before';
+        $next();
+        RouterMiddlewareRecorder::$events[] = 'second:after';
     }
 }

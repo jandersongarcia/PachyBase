@@ -1,10 +1,12 @@
 ---
+id: openapi
+title: OpenAPI
 sidebar_position: 8
 ---
 
-# OpenAPI automático
+# OpenAPI
 
-PachyBase now exposes a generated OpenAPI 3.0.3 document at `/openapi.json`.
+PachyBase exposes a generated OpenAPI 3.0.3 document at `/openapi.json`.
 
 The document is built from the same runtime sources used by the API itself:
 
@@ -38,6 +40,19 @@ This improves:
 
 - OpenAPI JSON endpoint: available
 - Swagger UI / Redoc: not bundled yet
+
+## Static generation
+
+You can export the current runtime contract to a file:
+
+```bash
+./pachybase openapi:generate
+./pachybase openapi:generate --output=docs-site/static/openapi.json
+```
+
+On Windows, use `.\pachybase.bat`.
+
+This is useful when publishing docs, generating SDKs, or reviewing contract drift in CI.
 
 Example:
 

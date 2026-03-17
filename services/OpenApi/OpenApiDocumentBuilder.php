@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PachyBase\Services\OpenApi;
 
+use PachyBase\Api\Controllers\AiController;
 use PachyBase\Api\Controllers\AuthController;
 use PachyBase\Api\Controllers\CrudController;
 use PachyBase\Api\Controllers\OpenApiController;
@@ -21,6 +22,7 @@ use PachyBase\Http\Route;
 use PachyBase\Http\Router;
 use PachyBase\Modules\Crud\CrudEntity;
 use PachyBase\Modules\Crud\CrudEntityRegistry;
+use PachyBase\Release\ProjectMetadata;
 use RuntimeException;
 use stdClass;
 
@@ -99,7 +101,7 @@ final class OpenApiDocumentBuilder
             'openapi' => '3.0.3',
             'info' => [
                 'title' => Config::get('APP_NAME', 'PachyBase') . ' API',
-                'version' => '1.0.0',
+                'version' => ProjectMetadata::version(),
                 'description' => 'Automatically generated from the registered routes, authentication layer, and CRUD entity metadata.',
             ],
             'servers' => [
@@ -186,6 +188,89 @@ final class OpenApiDocumentBuilder
                             ],
                         ]
                     ),
+                ],
+            ],
+            [AiController::class, 'schema'] => [
+                'operationId' => 'aiSchemaDocument',
+                'summary' => 'Read the AI-friendly schema document',
+                'description' => 'Publishes a machine-oriented schema view that summarizes entities, fields, writable rules, filters, pagination, operations, and OpenAPI compatibility.',
+                'tags' => ['Documentation'],
+                'responses' => [
+                    '200' => $this->jsonResponse(
+                        'AI-friendly schema document.',
+                        [
+                            'type' => 'object',
+                            'required' => ['schema_version', 'generated_at', 'navigation', 'openapi_compatibility', 'entities'],
+                            'properties' => [
+                                'schema_version' => ['type' => 'string', 'example' => '1.0'],
+                                'generated_at' => ['type' => 'string', 'format' => 'date-time'],
+                                'generator' => ['type' => 'object', 'additionalProperties' => true],
+                                'navigation' => ['type' => 'object', 'additionalProperties' => true],
+                                'openapi_compatibility' => ['type' => 'object', 'additionalProperties' => true],
+                                'entities' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                            ],
+                            'additionalProperties' => true,
+                        ]
+                    ),
+                ],
+            ],
+            [AiController::class, 'entities'] => [
+                'operationId' => 'aiEntitiesDocument',
+                'summary' => 'List AI-friendly entity summaries',
+                'description' => 'Returns the exposed entities with primary paths, field counts, and the operations available to frontend or agent tooling.',
+                'tags' => ['Documentation'],
+                'responses' => [
+                    '200' => $this->jsonResponse(
+                        'AI-friendly entity summaries.',
+                        [
+                            'type' => 'object',
+                            'required' => ['count', 'items'],
+                            'properties' => [
+                                'count' => ['type' => 'integer'],
+                                'items' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                            ],
+                            'additionalProperties' => true,
+                        ]
+                    ),
+                ],
+            ],
+            [AiController::class, 'entity'] => [
+                'operationId' => 'aiEntityDocument',
+                'summary' => 'Read one AI-friendly entity description',
+                'description' => 'Returns the full machine-readable contract for one exposed CRUD entity, including fields, filters, pagination, operations, and OpenAPI references.',
+                'tags' => ['Documentation'],
+                'parameters' => [
+                    [
+                        'name' => 'name',
+                        'in' => 'path',
+                        'required' => true,
+                        'description' => 'Exposed CRUD entity slug.',
+                        'schema' => ['type' => 'string'],
+                    ],
+                ],
+                'responses' => [
+                    '200' => $this->jsonResponse(
+                        'AI-friendly entity document.',
+                        [
+                            'type' => 'object',
+                            'required' => ['name', 'fields', 'operations', 'pagination', 'filters', 'openapi'],
+                            'properties' => [
+                                'name' => ['type' => 'string'],
+                                'entity_name' => ['type' => 'string'],
+                                'table' => ['type' => 'string'],
+                                'database_schema' => ['type' => 'string'],
+                                'primary_field' => ['type' => 'string', 'nullable' => true],
+                                'paths' => ['type' => 'object', 'additionalProperties' => true],
+                                'pagination' => ['type' => 'object', 'additionalProperties' => true],
+                                'filters' => ['type' => 'object', 'additionalProperties' => true],
+                                'operations' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                                'fields' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                                'openapi' => ['type' => 'object', 'additionalProperties' => true],
+                            ],
+                            'additionalProperties' => true,
+                        ]
+                    ),
+                    '404' => $this->responseRef('#/components/responses/NotFoundError'),
                 ],
             ],
             [AuthController::class, 'login'] => [
