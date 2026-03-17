@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace PachyBase\Controllers;
 
 use PachyBase\Config;
+use PachyBase\Database\Connection;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;
+use RuntimeException;
 
 class SystemController
 {
@@ -22,26 +24,17 @@ class SystemController
             $data['environment'] = Config::environment();
             $data['database'] = [
                 'driver' => Config::get('DB_DRIVER'),
-                'host' => Config::get('DB_HOST'),
-                'port' => Config::get('DB_PORT'),
-                'database' => Config::get('DB_DATABASE'),
+                'connected' => false,
             ];
 
             try {
-                $dsn = sprintf(
-                    '%s:host=%s;port=%s;dbname=%s',
-                    Config::get('DB_DRIVER', 'mysql'),
-                    Config::get('DB_HOST', '127.0.0.1'),
-                    Config::get('DB_PORT', '3306'),
-                    Config::get('DB_DATABASE', 'pachybase')
-                );
-                new \PDO($dsn, Config::get('DB_USERNAME', 'root'), Config::get('DB_PASSWORD', ''));
+                Connection::reset();
+                Connection::getInstance()->getPDO();
                 $data['database']['connected'] = true;
-            } catch (\Exception $e) {
+            } catch (RuntimeException) {
                 $data['database']['connected'] = false;
-                $data['database']['error'] = $e->getMessage();
             }
-            // Test accessing the request via the new class
+
             $data['request'] = [
                 'method' => $request->getMethod(),
                 'path' => $request->getPath(),

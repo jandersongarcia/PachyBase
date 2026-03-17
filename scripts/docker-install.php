@@ -6,7 +6,9 @@ $rootPath = dirname(__DIR__);
 $envPath = $rootPath . DIRECTORY_SEPARATOR . '.env';
 $composePath = $rootPath . DIRECTORY_SEPARATOR . 'docker' . DIRECTORY_SEPARATOR . 'docker-compose.yml';
 
-main($argv, $rootPath, $envPath, $composePath);
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    main($argv, $rootPath, $envPath, $composePath);
+}
 
 function main(array $argv, string $rootPath, string $envPath, string $composePath): void
 {
@@ -199,8 +201,6 @@ function buildDockerCompose(array $config): string
         '    restart: unless-stopped',
         '    environment:',
         $databaseService['environment'],
-        '    ports:',
-        '      - "' . $config['DB_PORT'] . ':' . $config['DB_PORT'] . '"',
         '    volumes:',
         '      - db_data:' . $config['DB_VOLUME_PATH'],
         '',
@@ -214,7 +214,7 @@ function buildDatabaseService(array $config): array
 {
     if ($config['DB_DRIVER'] === 'mysql') {
         $environment = [
-            '      MYSQL_ROOT_PASSWORD: ' . yamlScalar($config['DB_PASSWORD']),
+            '      MYSQL_ROOT_PASSWORD: ' . yamlScalar(rootPassword($config)),
             '      MYSQL_DATABASE: ' . yamlScalar($config['DB_DATABASE']),
         ];
 
@@ -238,6 +238,13 @@ function buildDatabaseService(array $config): array
 function yamlScalar(string $value): string
 {
     return '"' . addcslashes($value, "\\\"") . '"';
+}
+
+function rootPassword(array $config): string
+{
+    return strtolower($config['DB_USERNAME']) === 'root'
+        ? $config['DB_PASSWORD']
+        : bin2hex(random_bytes(16));
 }
 
 function runCommand(string $command, string $errorMessage): void
