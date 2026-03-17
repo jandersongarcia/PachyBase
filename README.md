@@ -54,9 +54,15 @@ Error responses keep the same outer structure:
   },
   "error": {
     "code": "VALIDATION_ERROR",
-    "type": "application_error",
+    "type": "validation_error",
     "message": "The request payload is invalid.",
-    "details": []
+    "details": [
+      {
+        "field": "email",
+        "code": "required",
+        "message": "The email field is required."
+      }
+    ]
   }
 }
 ```
@@ -69,6 +75,15 @@ Error responses keep the same outer structure:
 - `error` is always `null` on success or a fixed object on failure.
 - The API never mixes plain text, HTML, and JSON for different failure modes.
 
+### Official contract conventions
+
+- Required metadata: `meta.request_id`, `meta.timestamp`, `meta.method`, and `meta.path`.
+- Pagination responses expose `meta.pagination.total`, `per_page`, `current_page`, `last_page`, `from`, and `to`.
+- Validation failures use HTTP `422`, `error.code = "VALIDATION_ERROR"`, `error.type = "validation_error"`, and `error.details` as a list of field objects shaped like `field`, `code`, and `message`.
+- Authentication failures use HTTP `401` and `error.type = "authentication_error"` for missing, invalid, or expired credentials.
+- Authorization failures use HTTP `403` and `error.type = "authorization_error"` when the caller is authenticated but lacks permission.
+- New endpoints must return through `core/Http/ApiResponse.php`; controllers and middleware should not build JSON payloads manually.
+
 ### Current implementation
 
 - [`public/index.php`](./public/index.php) responds through a centralized JSON contract and acts as the front controller.
@@ -76,6 +91,7 @@ Error responses keep the same outer structure:
 - [`core/Http/Request.php`](./core/Http/Request.php) abstracts incoming HTTP requests safely.
 - [`core/Http/ApiResponse.php`](./core/Http/ApiResponse.php) is the single response formatter.
 - [`core/Http/ErrorHandler.php`](./core/Http/ErrorHandler.php) converts PHP errors and exceptions into the same API structure.
+- [`docs-site/docs/api-contract.md`](./docs-site/docs/api-contract.md) is the canonical public contract specification.
 
 ## Routing and Controllers
 
@@ -113,9 +129,11 @@ class SystemController
 }
 ```
 
-## Docker install
+## Installation
 
-Configure the database connection in [`.env`](./.env). It supports `mysql` and `pgsql`:
+PachyBase only requires Docker and Docker Compose on the host machine. Composer runs inside the PHP container during setup.
+
+Before installation, create [`.env`](./.env) from [`.env.example`](./.env.example) and fill in the database settings. This step is mandatory because `DB_DRIVER` defines which database container will be generated in `docker/docker-compose.yml`. The supported drivers are `mysql` and `pgsql`:
 
 ```env
 DB_DRIVER=mysql
@@ -126,17 +144,43 @@ DB_USERNAME=root
 DB_PASSWORD=root
 ```
 
-Then run:
+Example:
 
 ```bash
-composer install
-composer docker-install
+cp .env.example .env
 ```
 
-The `docker-install` script is a smart automation tool that:
-1. Validates your database settings.
-2. Generates a custom `docker/Dockerfile` to compile PHP 8.2 with the exact PDO extensions required by your driver.
-3. Configures an Nginx container (`docker/nginx.conf`) to handle URL rewriting.
-4. Generates a tailored `docker/docker-compose.yml` and starts the containers.
+### Windows
+
+After configuring `.env`, run this from PowerShell or Command Prompt in the project root:
+
+```bash
+.\install.bat
+```
+
+### Linux
+
+After configuring `.env`, run this from a shell in the project root:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+Both installers perform these steps:
+1. Validate Docker and Docker Compose availability.
+2. Read the database settings from `.env`.
+3. Generate `docker/docker-compose.yml` from the database settings.
+4. Build the PHP image with Composer available inside Docker.
+5. Run `composer install` inside the PHP container.
+6. Start the containers with `docker compose up -d`.
+
+After installation, you can manage the stack with:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml down
+docker compose -f docker/docker-compose.yml logs -f
+```
 
 Once running, PachyBase is accessible at **`http://localhost:8080`**.

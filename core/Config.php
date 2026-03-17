@@ -21,6 +21,16 @@ class Config
         return self::$config[$key] ?? $default;
     }
 
+    public static function override(array $config): void
+    {
+        self::$config = $config;
+    }
+
+    public static function reset(): void
+    {
+        self::$config = [];
+    }
+
     public static function environment(): string
     {
         $environment = strtolower(trim((string) self::get('APP_ENV', 'production')));

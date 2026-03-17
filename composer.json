@@ -5,12 +5,22 @@
   "require": {
     "vlucas/phpdotenv": "^5.5"
   },
-  "scripts": {
-    "docker-install": "@php scripts/docker-install.php"
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
   },
   "autoload": {
     "psr-4": {
       "PachyBase\\": "core/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "docker-install": "@php scripts/docker-install.php",
+    "test": "phpunit --testdox"
   }
 }
+

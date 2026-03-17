@@ -26,39 +26,62 @@ class Request
         $this->body = $body;
     }
 
-    public static function capture(): self
+    public static function capture(
+        ?array $server = null,
+        ?array $query = null,
+        ?array $post = null,
+        ?array $headers = null,
+        ?string $rawBody = null
+    ): self
     {
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        
-        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        $server ??= $_SERVER;
+        $query ??= $_GET;
+        $post ??= $_POST;
+
+        $method = $server['REQUEST_METHOD'] ?? 'GET';
+
+        $uri = $server['REQUEST_URI'] ?? '/';
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 
-        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        $headers ??= function_exists('getallheaders') ? getallheaders() : [];
         if (empty($headers)) {
-            foreach ($_SERVER as $name => $value) {
+            foreach ($server as $name => $value) {
                 if (str_starts_with($name, 'HTTP_')) {
                     $headerName = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
                     $headers[$headerName] = $value;
+                }
+            }
+
+            foreach (['CONTENT_TYPE' => 'Content-Type', 'CONTENT_LENGTH' => 'Content-Length'] as $name => $headerName) {
+                if (isset($server[$name])) {
+                    $headers[$headerName] = $server[$name];
                 }
             }
         }
 
         $body = [];
         $contentType = $headers['Content-Type'] ?? $headers['content-type'] ?? '';
-        
+
         if (str_contains(strtolower((string) $contentType), 'application/json')) {
-            $input = file_get_contents('php://input');
+            $input = $rawBody ?? file_get_contents('php://input');
             if ($input) {
-                $decoded = json_decode($input, true);
-                if (is_array($decoded)) {
-                    $body = $decoded;
+                try {
+                    $decoded = json_decode($input, true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    throw new \RuntimeException('Invalid JSON request body.', 400);
                 }
+
+                if (!is_array($decoded)) {
+                    throw new \RuntimeException('JSON request body must decode to an object or array.', 400);
+                }
+
+                $body = $decoded;
             }
         } else {
-            $body = $_POST;
+            $body = $post;
         }
 
-        return new self($method, $path, $_GET, $headers, $body);
+        return new self($method, $path, $query, $headers, $body);
     }
 
     public function getMethod(): string

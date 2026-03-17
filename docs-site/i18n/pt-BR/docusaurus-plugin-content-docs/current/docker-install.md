@@ -6,9 +6,17 @@ sidebar_position: 3
 
 # Instalacao Docker
 
-O PachyBase pode provisionar sua stack Docker local diretamente pelo Composer.
+O PachyBase pode provisionar sua stack Docker local diretamente pelo Docker, sem exigir Composer instalado na maquina host.
 
 Antes de executar o instalador Docker, obtenha o codigo-fonte pelo [GitHub](https://github.com/jandersongarcia/pachybase) ou pelo [download do ZIP do projeto](https://github.com/jandersongarcia/pachybase/archive/refs/heads/main.zip).
+
+## Etapa manual obrigatoria
+
+Crie `.env` a partir de `.env.example` e preencha as configuracoes do banco antes de rodar o instalador. `DB_DRIVER` define se a stack gerada usara MySQL ou PostgreSQL.
+
+```bash
+cp .env.example .env
+```
 
 ## Valores obrigatorios no `.env`
 
@@ -28,22 +36,32 @@ Drivers de banco suportados:
 
 ## Fluxo de instalacao
 
+### Windows
+
+```powershell
+.\install.bat
+```
+
+### Linux
+
 ```bash
-composer install
-composer docker-install
+chmod +x install.sh
+./install.sh
 ```
 
 O instalador executa estas etapas:
 
 1. Valida a configuracao do banco no `.env`.
 2. Gera `docker/docker-compose.yml`.
-3. Configura o container do banco conforme o driver selecionado.
-4. Sobe os containers com `docker compose up -d`.
+3. Faz o build da imagem PHP com Composer disponivel dentro do container.
+4. Executa `composer install` dentro do container PHP.
+5. Sobe os containers com `docker compose up -d`.
 
-## Dry run
+## Observacoes de configuracao
 
-Use o modo dry-run para validar a configuracao sem subir containers:
+O instalador nao cria `.env` automaticamente. Configure esse arquivo manualmente antes de rodar o setup.
 
 ```bash
-composer docker-install -- --dry-run
+docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml down
 ```
