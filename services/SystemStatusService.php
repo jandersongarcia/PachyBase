@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace PachyBase\Controllers;
+namespace PachyBase\Services;
 
 use PachyBase\Config;
+use PachyBase\Database\AdapterFactory;
 use PachyBase\Database\Connection;
-use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;
 use RuntimeException;
 
-class SystemController
+final class SystemStatusService
 {
-    public function status(Request $request): void
+    public function buildStatusPayload(Request $request): array
     {
         $data = [
             'name' => Config::get('APP_NAME', 'PachyBase'),
             'status' => 'running',
-            'version' => '1.0.0', // Arbitrary MVP version
+            'version' => '1.0.0',
         ];
 
         if (!Config::isProduction()) {
@@ -25,11 +25,14 @@ class SystemController
             $data['database'] = [
                 'driver' => Config::get('DB_DRIVER'),
                 'connected' => false,
+                'adapter' => null,
             ];
 
             try {
                 Connection::reset();
-                Connection::getInstance()->getPDO();
+                $connection = Connection::getInstance();
+                $connection->getPDO();
+                $data['database']['adapter'] = AdapterFactory::make($connection)::class;
                 $data['database']['connected'] = true;
             } catch (RuntimeException) {
                 $data['database']['connected'] = false;
@@ -41,8 +44,6 @@ class SystemController
             ];
         }
 
-        ApiResponse::success($data, [
-            'resource' => 'system.status',
-        ]);
+        return $data;
     }
 }

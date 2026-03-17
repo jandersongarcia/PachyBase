@@ -10,7 +10,16 @@
     </testsuites>
     <source>
         <include>
+            <directory>api</directory>
+            <directory>auth</directory>
+            <directory>config</directory>
             <directory>core</directory>
+            <directory>database</directory>
+            <directory>modules</directory>
+            <directory>public</directory>
+            <directory>routes</directory>
+            <directory>services</directory>
+            <directory>utils</directory>
         </include>
     </source>
 </phpunit>

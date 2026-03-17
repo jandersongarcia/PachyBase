@@ -56,6 +56,8 @@ O instalador executa estas etapas:
 3. Faz o build da imagem PHP com Composer disponivel dentro do container.
 4. Executa `composer install` dentro do container PHP.
 5. Sobe os containers com `docker compose up -d`.
+6. Espera o banco ficar pronto.
+7. Executa automaticamente as migrations e seeds padrao.
 
 ## Observacoes de configuracao
 
@@ -64,4 +66,10 @@ O instalador nao cria `.env` automaticamente. Configure esse arquivo manualmente
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml down
+```
+
+Se necessario, voce tambem pode rodar novamente o bootstrap do banco manualmente:
+
+```bash
+docker compose -f docker/docker-compose.yml exec php php scripts/bootstrap-database.php
 ```

@@ -128,9 +128,13 @@ Falhas de autorizacao devem usar HTTP `403` quando o cliente estiver autenticado
 - A API nunca deve alternar entre JSON, HTML e texto puro conforme o tipo de erro.
 - Endpoints novos devem responder via `core/Http/ApiResponse.php`.
 - Todo novo endpoint deve ganhar teste de contrato.
+- Camadas de runtime fora de `core/Http/ApiResponse.php` nao podem emitir saida HTTP crua diretamente.
 
 ## Implementacao atual
 
 - `core/Http/ApiResponse.php` formata respostas de sucesso e falha.
 - `core/Http/ErrorHandler.php` converte excecoes e erros PHP para o mesmo contrato.
-- `public/index.php` ja usa essa camada de resposta compartilhada.
+- `public/index.php` delega o tratamento da requisicao para o bootstrap e para o kernel modular.
+- `routes/api.php` centraliza o registro das rotas HTTP.
+- `api/Controllers/` e `services/` separam a orquestracao do endpoint da logica de negocio.
+- `tests/Architecture/ApiContractEnforcementTest.php` bloqueia logica manual de resposta nas camadas de runtime.

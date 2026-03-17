@@ -12,7 +12,7 @@ PachyBase is a self-hosted PHP backend foundation focused on predictable JSON AP
 ## What the project does today
 
 - Loads application and database configuration from `.env`.
-- Exposes a health/status endpoint through `public/index.php`.
+- Exposes a health/status endpoint through a modular HTTP kernel.
 - Uses a centralized JSON response contract for success and failure.
 - Installs Docker services from Composer based on the configured database driver.
 
@@ -26,7 +26,10 @@ PachyBase is a self-hosted PHP backend foundation focused on predictable JSON AP
 ## Documentation map
 
 - [Install](./install.md)
+- [Architecture](./architecture.md)
 - [API Contract](./api-contract.md)
+- [Database Layer](./database-layer.md)
+- [Contract Enforcement](./contract-enforcement.md)
 - [Libraries](./libraries.md)
 - [Docker Install](./docker-install.md)
 
@@ -38,3 +41,4 @@ npm run start
 ```
 
 By default, the documentation opens in English. Use the locale selector in the top navigation to switch to `pt-BR`.
+

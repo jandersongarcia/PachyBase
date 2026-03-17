@@ -60,5 +60,21 @@ The platform installers perform the same setup flow:
 3. Builds the PHP image with Composer available inside Docker.
 4. Runs `composer install` inside the PHP container.
 5. Starts the containers.
+6. Waits for the database to become ready.
+7. Runs the default migrations and seeds automatically.
+
+After the installer finishes, the local environment already includes:
+
+- the migration control table
+- the seed control table
+- the base system tables
+- the default initial settings seed
+
+To rebuild the full local environment without manual database work:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v
+./install.sh
+```
 
 After the source code is available locally, continue with [Docker Install](./docker-install.md) for more details about the Docker flow.

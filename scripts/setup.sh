@@ -171,6 +171,11 @@ invoke_docker_compose() {
   docker compose -f "$COMPOSE_PATH" "$@" || fail "Docker Compose command failed: docker compose -f docker/docker-compose.yml $*"
 }
 
+bootstrap_database() {
+  step "Bootstrapping database schema and seeds"
+  invoke_docker_compose exec -T php php scripts/bootstrap-database.php
+}
+
 step "Validating required tools"
 assert_command docker --version
 assert_command docker compose version
@@ -197,5 +202,7 @@ invoke_docker_compose run --rm --no-deps php composer install --no-interaction
 
 step "Starting containers"
 invoke_docker_compose up -d
+
+bootstrap_database
 
 printf '\n%s\n' "PachyBase is available at http://localhost:8080"
