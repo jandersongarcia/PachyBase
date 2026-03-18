@@ -1,50 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PachyBase;
 
-use Dotenv\Dotenv;
+use PachyBase\Config\AppConfig;
 
-class Config
+final class Config
 {
-    private static $config = [];
-
-    public static function load()
+    public static function load(?string $basePath = null): void
     {
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
-        $dotenv->load();
-
-        self::$config = $_ENV;
+        AppConfig::load($basePath ?? dirname(__DIR__));
     }
 
-    public static function get($key, $default = null)
+    public static function get(string $key, mixed $default = null): mixed
     {
-        return self::$config[$key] ?? $default;
+        return AppConfig::get($key, $default);
+    }
+
+    public static function override(array $config): void
+    {
+        AppConfig::override($config);
+    }
+
+    public static function reset(): void
+    {
+        AppConfig::reset();
     }
 
     public static function environment(): string
     {
-        $environment = strtolower(trim((string) self::get('APP_ENV', 'production')));
-
-        return $environment === 'development' ? 'development' : 'production';
+        return AppConfig::environment();
     }
 
     public static function isProduction(): bool
     {
-        return self::environment() === 'production';
+        return AppConfig::isProduction();
     }
 
     public static function debugEnabled(): bool
     {
-        if (self::isProduction()) {
-            return false;
-        }
-
-        $value = self::get('APP_DEBUG', false);
-
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'on'], true);
+        return AppConfig::debugEnabled();
     }
 }

@@ -12,6 +12,9 @@ class Route
     private $handler;
     public readonly string $pattern;
     private array $paramNames = [];
+    /** @var string[] Middleware class names */
+    private array $middlewares = [];
+
 
     public function __construct(string $method, string $path, callable|array $handler)
     {
@@ -69,4 +72,28 @@ class Route
     {
         return $this->handler;
     }
+
+    public function getParamNames(): array
+    {
+        return $this->paramNames;
+    }
+
+    /**
+     * Attach middleware classes to this route.
+     * Each middleware must implement: handle(Request $request, callable $next): void
+     *
+     * @param string[] $middlewares
+     */
+    public function middleware(array $middlewares): static
+    {
+        $this->middlewares = array_merge($this->middlewares, $middlewares);
+        return $this;
+    }
+
+    /** @return string[] */
+    public function getMiddlewares(): array
+    {
+        return $this->middlewares;
+    }
 }
+
