@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # Testing
 
-A Fase 12 estabelece uma suite automatizada focada em regressao sobre o runtime central, o contrato HTTP, a infraestrutura de banco, as superficies machine-readable e a CLI do projeto.
+A suite atual de regressao protege o runtime central, o contrato HTTP, a infraestrutura de banco, as superficies machine-readable e a CLI do projeto.
 
 ## Como rodar a suite
 
@@ -25,7 +25,31 @@ No Windows, use:
 ### Execucao direta via Docker
 
 ```bash
-docker compose -f docker/docker-compose.yml run --rm php php vendor/bin/phpunit --testdox
+docker compose -f docker/docker-compose.yml run --rm php vendor/bin/phpunit --testdox
+```
+
+### Execucao em instalacao local
+
+Se voce estiver usando o runtime gerenciado na host em vez de Docker:
+
+```bash
+vendor/bin/phpunit --testdox
+```
+
+## Pronto para release
+
+Rode a verificacao de release junto com a suite de testes:
+
+```bash
+./pachybase doctor
+./pachybase env:validate
+./pachybase status
+```
+
+Para instalacao local, rode:
+
+```bash
+php scripts/doctor.php
 ```
 
 ## Matriz de cobertura
@@ -41,7 +65,7 @@ docker compose -f docker/docker-compose.yml run --rm php php vendor/bin/phpunit 
 - Autenticacao e autorizacao: `tests/Auth/JwtCodecTest.php`, `tests/Auth/AuthServiceIntegrationTest.php`, `tests/Auth/AuthorizationServiceTest.php`, `tests/Auth/RequireBearerTokenTest.php` e `tests/Api/AuthHttpKernelTest.php`
 - Endpoints AI-friendly: `tests/Services/Ai/AiSchemaServiceIntegrationTest.php` e `tests/Api/AiHttpKernelTest.php`
 - Geracao e publicacao de OpenAPI: `tests/Services/OpenApi/OpenApiDocumentBuilderTest.php`, `tests/Api/OpenApiHttpKernelTest.php` e `tests/Scripts/OpenApiGenerateTest.php`
-- CLI e tooling do desenvolvedor: `tests/Cli/PachybaseCliTest.php`, `tests/Scripts/CrudSyncTest.php` e `tests/Scripts/DockerInstallTest.php`
+- CLI e tooling do desenvolvedor: `tests/Cli/PachybaseCliTest.php`, `tests/Cli/EnvironmentFileManagerTest.php`, `tests/Scripts/CrudSyncTest.php`, `tests/Scripts/DockerInstallTest.php` e `tests/Scripts/AiBuildTest.php`
 - Superficie de integracao com Docker, quando aplicavel: `tests/Scripts/DockerInstallTest.php` mais o caminho containerizado de PHPUnit usado por `pachybase test`
 
 ## Politica minima de regressao
@@ -53,4 +77,4 @@ docker compose -f docker/docker-compose.yml run --rm php php vendor/bin/phpunit 
 
 ## Expectativa atual
 
-O criterio de conclusao da Fase 12 e manter uma rede minima de seguranca automatizada sobre todas as features centrais antes que as proximas fases ampliem o comportamento.
+As features centrais devem manter uma rede minima de seguranca automatizada antes que novas mudancas de runtime ampliem o comportamento.

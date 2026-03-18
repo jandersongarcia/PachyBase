@@ -2,9 +2,9 @@
 
 PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
 
-Current release candidate: `1.0.0-rc.1`
+Current stage: release candidate `1.0.0-rc.1`
 
-## Quick start
+## Quick start (Docker)
 
 ```bash
 cp .env.example .env
@@ -30,6 +30,19 @@ Before exposing the project to third parties, run:
 ```bash
 ./pachybase doctor
 ```
+
+## Installation paths
+
+PachyBase documents two official installation paths:
+
+- Docker-first quick start for the fastest supported setup
+- Local installation for teams that want PHP, Composer, and the database directly on the host while keeping the same project CLI
+
+Documentation entry points:
+
+- Install overview: <https://jandersongarcia.github.io/pachybase/install>
+- Install with Docker: <https://jandersongarcia.github.io/pachybase/docker-install>
+- Local installation: <https://jandersongarcia.github.io/pachybase/local-install>
 
 ## What is included today
 
@@ -81,6 +94,10 @@ Required values:
 APP_NAME=PachyBase
 APP_ENV=development
 APP_DEBUG=true
+APP_RUNTIME=docker
+APP_HOST=127.0.0.1
+APP_PORT=8080
+APP_URL=http://localhost:8080
 
 DB_DRIVER=mysql
 DB_HOST=db
@@ -92,6 +109,7 @@ DB_PASSWORD=change_this_password
 
 Optional values include:
 
+- `APP_KEY`
 - `DB_SCHEMA` for PostgreSQL
 - `AUTH_JWT_SECRET`
 - `AUTH_JWT_ISSUER`
@@ -167,7 +185,7 @@ OpenAPI:
 
 ```bash
 curl http://localhost:8080/openapi.json
-./pachybase openapi:generate --output=build/openapi.json
+./pachybase openapi:build --output=build/openapi.json
 ```
 
 AI-friendly endpoints:
@@ -180,50 +198,89 @@ curl http://localhost:8080/ai/entity/system-settings
 
 ## CLI
 
-Main commands:
+Lifecycle:
 
-- `version`
 - `install`
-- `env:init`
+- `start`
+- `stop`
 - `doctor`
-- `docker:install`
+- `status`
+- `test`
+
+Environment:
+
+- `env:sync`
+- `env:validate`
+- `app:key`
+
+Docker:
+
+- `docker:sync`
 - `docker:up`
 - `docker:down`
-- `migrate`
-- `migrate:rollback`
-- `seed`
+- `docker:logs`
+
+Database:
+
+- `db:setup`
+- `db:migrate`
+- `db:rollback`
+- `db:seed`
+- `db:fresh`
+
+Scaffolding:
+
+- `make:module`
+- `make:entity`
+- `make:migration`
+- `make:seed`
+- `make:controller`
+- `make:service`
+- `make:middleware`
+- `make:test`
+- `crud:generate`
+
+Build and inspection:
+
+- `auth:install`
 - `entity:list`
 - `crud:sync`
-- `crud:generate`
-- `openapi:generate`
-- `test`
+- `openapi:build`
+- `ai:build`
+- `version`
+
+Legacy aliases such as `env:init`, `docker:install`, `release:check`, and `openapi:generate` still resolve for backward compatibility, but the canonical command names are the ones listed above.
 
 ## Documentation
 
-Official docs source:
+Published docs:
 
-- English: [`docs-site/docs/`](docs-site/docs/)
-- Portuguese: [`docs-site/i18n/pt-BR/docusaurus-plugin-content-docs/current/`](docs-site/i18n/pt-BR/docusaurus-plugin-content-docs/current/)
+- English: <https://jandersongarcia.github.io/pachybase/>
+- Portuguese: <https://jandersongarcia.github.io/pachybase/pt-BR/>
+
+The `docs-site/` workspace remains in the Git repository for documentation authoring, but it is excluded from release archives to keep the distributed package focused on the runtime.
 
 Recommended entry points:
 
-- [Overview](docs-site/docs/intro.md)
-- [Install](docs-site/docs/install.md)
-- [Configuration](docs-site/docs/configuration.md)
-- [Supported Databases](docs-site/docs/supported-databases.md)
-- [API Contract](docs-site/docs/api-contract.md)
-- [Authentication and Authorization](docs-site/docs/auth-security.md)
-- [Automatic CRUD](docs-site/docs/automatic-crud.md)
-- [Filters and Pagination](docs-site/docs/filters-pagination.md)
-- [OpenAPI](docs-site/docs/openapi.md)
-- [AI Endpoints](docs-site/docs/ai-endpoints.md)
-- [CLI](docs-site/docs/cli.md)
-- [Contributing](docs-site/docs/contributing.md)
-- [Roadmap](docs-site/docs/roadmap.md)
-- [Examples](docs-site/docs/examples.md)
-- [Release Process](docs-site/docs/release-process.md)
+- [Overview](https://jandersongarcia.github.io/pachybase/)
+- [Install](https://jandersongarcia.github.io/pachybase/install)
+- [Install with Docker](https://jandersongarcia.github.io/pachybase/docker-install)
+- [Local Installation](https://jandersongarcia.github.io/pachybase/local-install)
+- [Configuration](https://jandersongarcia.github.io/pachybase/configuration)
+- [Supported Databases](https://jandersongarcia.github.io/pachybase/supported-databases)
+- [API Contract](https://jandersongarcia.github.io/pachybase/api-contract)
+- [Authentication and Authorization](https://jandersongarcia.github.io/pachybase/auth-security)
+- [Automatic CRUD](https://jandersongarcia.github.io/pachybase/automatic-crud)
+- [Filters and Pagination](https://jandersongarcia.github.io/pachybase/filters-pagination)
+- [OpenAPI](https://jandersongarcia.github.io/pachybase/openapi)
+- [AI Endpoints](https://jandersongarcia.github.io/pachybase/ai-endpoints)
+- [CLI](https://jandersongarcia.github.io/pachybase/cli)
+- [Contributing](https://jandersongarcia.github.io/pachybase/contributing)
+- [Roadmap](https://jandersongarcia.github.io/pachybase/roadmap)
+- [Examples](https://jandersongarcia.github.io/pachybase/examples)
+- [Release Process](https://jandersongarcia.github.io/pachybase/release-process)
 
-Run the docs site locally:
+To work on the docs site locally from the Git repository:
 
 ```bash
 cd docs-site

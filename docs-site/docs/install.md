@@ -6,7 +6,12 @@ sidebar_position: 2
 
 # Install
 
-PachyBase can be installed on Windows and Linux with Docker and Docker Compose only. Composer is executed inside the PHP container during setup.
+PachyBase ships with two official installation tracks:
+
+- Docker installation: the primary and fastest path for most teams
+- Local installation: the official manual path for teams running PHP, Composer, and the database on the host
+
+Choose the path that matches your environment. Both tracks are supported on Windows and Linux.
 
 ## Repository
 
@@ -26,69 +31,63 @@ cd pachybase
 2. Extract the project files.
 3. Open the extracted folder.
 
-## Recommended flow
+## Quick decision guide
 
-The preferred entrypoint is the project CLI:
+Choose [Install with Docker](./docker-install.md) if you want:
+
+- the fastest supported setup
+- the default onboarding flow
+- project commands through `./pachybase` or `.\pachybase.bat`
+- database provisioning handled for you
+
+Choose [Local Installation](./local-install.md) if you want:
+
+- PHP, Composer, and the database managed directly on the host
+- no Docker dependency for development
+- direct control over the runtime and database services while keeping the same project CLI
+
+## Path 1: Install with Docker
+
+This is the main track and the recommended starting point.
 
 ```bash
-./pachybase env:init
+cp .env.example .env
 ./pachybase install
 ./pachybase doctor
 ```
 
 On Windows, replace `./pachybase` with `.\pachybase.bat`.
 
-## Required manual step
+Read the full guide: [Install with Docker](./docker-install.md)
 
-Before running the installer, create `.env` from `.env.example` and fill in the database settings. This step is mandatory because `DB_DRIVER` determines which database container will be generated during setup.
+## Path 2: Local Installation
+
+This is the official alternative track for teams that do not want the runtime inside Docker.
+
+Typical flow:
 
 ```bash
 cp .env.example .env
+composer install
+# update APP_RUNTIME=local and your DB_* values
+./pachybase install
+./pachybase status
 ```
 
-## Windows
-
-After configuring `.env`, run this from PowerShell or Command Prompt in the project root:
-
-```powershell
-.\install.bat
-```
-
-## Linux
-
-After configuring `.env`, run this from a shell in the project root:
+Direct host commands remain available when you want to operate one step at a time:
 
 ```bash
-chmod +x install.sh
-./install.sh
+cp .env.example .env
+composer install
+php scripts/bootstrap-database.php
+php -S 127.0.0.1:8080 -t public public/router.php
 ```
 
-## Next step
+Read the full guide: [Local Installation](./local-install.md)
 
-The platform installers perform the same setup flow:
+## Release readiness
 
-1. Reads the database settings from `.env`.
-2. Generates `docker/docker-compose.yml` from the database settings.
-3. Builds the PHP image with Composer available inside Docker.
-4. Runs `composer install` inside the PHP container.
-5. Starts the containers.
-6. Waits for the database to become ready.
-7. Runs the default migrations and seeds automatically.
+Before sharing the environment with other developers or publishing a release candidate, run the runtime checks that match your chosen track:
 
-After the installer finishes, the local environment already includes:
-
-- the migration control table
-- the seed control table
-- the base system tables
-- the default initial settings seed
-
-To rebuild the full local environment without manual database work:
-
-```bash
-docker compose -f docker/docker-compose.yml down -v
-./install.sh
-```
-
-After the source code is available locally, continue with [CLI](./cli.md) and [Docker Install](./docker-install.md) for more details about the operational flow.
-
-Before sharing the environment with other developers or publishing a release candidate, run `./pachybase doctor` to validate the runtime posture.
+- Docker track: `./pachybase doctor`
+- Local track: `./pachybase doctor` (or `php scripts/doctor.php` when you want the direct PHP entrypoint)

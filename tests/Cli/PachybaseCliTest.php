@@ -23,9 +23,9 @@ class PachybaseCliTest extends TestCase
         $this->assertIsString($output);
         $this->assertStringContainsString('version', $output);
         $this->assertStringContainsString('doctor', $output);
-        $this->assertStringContainsString('env:init', $output);
-        $this->assertStringContainsString('crud:sync', $output);
-        $this->assertStringContainsString('openapi:generate', $output);
+        $this->assertStringContainsString('env:sync', $output);
+        $this->assertStringContainsString('crud:generate', $output);
+        $this->assertStringContainsString('openapi:build', $output);
     }
 
     public function testVersionCommandRunsVersionScriptLocally(): void
@@ -72,9 +72,11 @@ class PachybaseCliTest extends TestCase
 
         $this->assertSame(0, $firstExitCode);
         $this->assertSame(0, $secondExitCode);
-        $this->assertStringContainsString('Created .env', (string) $firstOutput);
-        $this->assertStringContainsString('already exists', (string) $secondOutput);
-        $this->assertSame("APP_NAME=Changed\n", file_get_contents($projectPath . DIRECTORY_SEPARATOR . '.env'));
+        $this->assertStringContainsString('.env created', strtolower((string) $firstOutput));
+        $this->assertStringContainsString('.env updated', strtolower((string) $secondOutput));
+        $envContents = (string) file_get_contents($projectPath . DIRECTORY_SEPARATOR . '.env');
+        $this->assertStringContainsString("APP_NAME=Changed\n", $envContents);
+        $this->assertStringContainsString('APP_ENV=development', $envContents);
     }
 
     public function testInstallRunsDockerPreparationStartupAndBootstrapFlow(): void
@@ -86,12 +88,13 @@ class PachybaseCliTest extends TestCase
         $exitCode = $cli->run(['install']);
 
         $this->assertSame(0, $exitCode);
-        $this->assertCount(5, $runner->calls);
+        $this->assertCount(6, $runner->calls);
         $this->assertStringContainsString('scripts/docker-install.php', $runner->calls[0]['command']);
-        $this->assertStringContainsString('build', $runner->calls[1]['command']);
-        $this->assertStringContainsString('composer', $runner->calls[2]['command']);
-        $this->assertStringContainsString('up', $runner->calls[3]['command']);
-        $this->assertStringContainsString('bootstrap-database.php', $runner->calls[4]['command']);
+        $this->assertStringContainsString('up', $runner->calls[1]['command']);
+        $this->assertStringContainsString('bootstrap-database.php', $runner->calls[2]['command']);
+        $this->assertStringContainsString('scripts/seed.php', $runner->calls[3]['command']);
+        $this->assertStringContainsString('scripts/openapi-generate.php', $runner->calls[4]['command']);
+        $this->assertStringContainsString('scripts/ai-build.php', $runner->calls[5]['command']);
     }
 
     public function testCrudGenerateAliasUsesCrudSyncScriptInsidePhpContainer(): void
@@ -142,7 +145,21 @@ class PachybaseCliTest extends TestCase
         mkdir($projectPath, 0777, true);
         mkdir($projectPath . DIRECTORY_SEPARATOR . 'scripts', 0777, true);
         mkdir($projectPath . DIRECTORY_SEPARATOR . 'docker', 0777, true);
-        file_put_contents($projectPath . DIRECTORY_SEPARATOR . '.env.example', "APP_NAME=PachyBase\n");
+        file_put_contents($projectPath . DIRECTORY_SEPARATOR . '.env.example', implode(PHP_EOL, [
+            'APP_NAME=PachyBase',
+            'APP_ENV=development',
+            'APP_DEBUG=true',
+            'APP_RUNTIME=docker',
+            'APP_HOST=127.0.0.1',
+            'APP_PORT=8080',
+            'APP_URL=http://localhost:8080',
+            'DB_DRIVER=mysql',
+            'DB_HOST=db',
+            'DB_PORT=3306',
+            'DB_DATABASE=pachybase',
+            'DB_USERNAME=pachybase',
+            'DB_PASSWORD=secret',
+        ]) . PHP_EOL);
 
         if ($withCompose) {
             file_put_contents($projectPath . DIRECTORY_SEPARATOR . 'docker' . DIRECTORY_SEPARATOR . 'docker-compose.yml', "services:\n");

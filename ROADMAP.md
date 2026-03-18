@@ -29,4 +29,4 @@ This roadmap is directional and may evolve as the product grows.
 - Optional SDK generation workflows
 - More operational tooling
 
-See the documentation version in [`docs-site/docs/roadmap.md`](docs-site/docs/roadmap.md).
+See the documentation version at <https://jandersongarcia.github.io/pachybase/roadmap>.

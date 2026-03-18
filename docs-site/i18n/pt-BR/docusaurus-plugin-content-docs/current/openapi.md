@@ -46,8 +46,8 @@ Isso melhora:
 Voce pode exportar o contrato atual para um arquivo:
 
 ```bash
-./pachybase openapi:generate
-./pachybase openapi:generate --output=docs-site/static/openapi.json
+./pachybase openapi:build
+./pachybase openapi:build --output=docs-site/static/openapi.json
 ```
 
 No Windows, use `.\pachybase.bat`.
