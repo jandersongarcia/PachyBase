@@ -10,9 +10,9 @@ const config: Config = {
     v4: true,
   },
   url: 'https://jandersongarcia.github.io',
-  baseUrl: '/pachybase/',
+  baseUrl: '/PachyBase/',
   organizationName: 'jandersongarcia',
-  projectName: 'pachybase',
+  projectName: 'PachyBase',
   trailingSlash: false,
   onBrokenLinks: 'throw',
   i18n: {
@@ -37,7 +37,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
           editUrl:
-            'https://github.com/jandersongarcia/pachybase/tree/main/docs-site/',
+            'https://github.com/jandersongarcia/PachyBase/tree/main/docs-site/',
         },
         blog: false,
         theme: {
@@ -79,12 +79,12 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/jandersongarcia/pachybase/archive/refs/heads/main.zip',
+          href: 'https://github.com/jandersongarcia/PachyBase/archive/refs/heads/main.zip',
           label: 'Download ZIP',
           position: 'right',
         },
         {
-          href: 'https://github.com/jandersongarcia/pachybase',
+          href: 'https://github.com/jandersongarcia/PachyBase',
           label: 'GitHub',
           position: 'right',
         },
@@ -140,7 +140,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/jandersongarcia/pachybase',
+              href: 'https://github.com/jandersongarcia/PachyBase',
             },
           ],
         },
