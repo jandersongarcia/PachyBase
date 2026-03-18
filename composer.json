@@ -1,7 +1,12 @@
 {
   "name": "pachybase/core",
-  "description": "PachyBase MVP skeleton",
+  "description": "Open-source self-hosted backend foundation for predictable JSON APIs",
   "type": "project",
+  "archive": {
+    "exclude": [
+      "/docs-site"
+    ]
+  },
   "bin": [
     "pachybase"
   ],
@@ -31,17 +36,20 @@
   "scripts": {
     "docker-install": "@php scripts/docker-install.php",
     "doctor": "@php scripts/doctor.php",
+    "status": "@php scripts/status.php",
     "version": "@php scripts/version.php",
     "test": "phpunit --testdox",
     "db:inspect:entities": "@php scripts/inspect-entities.php",
     "crud:sync": "@php scripts/crud-sync.php",
     "openapi:generate": "@php scripts/openapi-generate.php",
+    "ai:build": "@php scripts/ai-build.php",
     "migrations:status": "@php scripts/migrate.php status",
     "migrate": "@php scripts/migrate.php up",
     "migrations:rollback": "@php scripts/migrate.php down",
     "db:seed:status": "@php scripts/seed.php status",
     "db:seed": "@php scripts/seed.php run",
-    "db:bootstrap": "@php scripts/bootstrap-database.php"
+    "db:bootstrap": "@php scripts/bootstrap-database.php",
+    "db:fresh": "@php scripts/db-fresh.php"
   }
 }
 

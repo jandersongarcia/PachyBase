@@ -92,11 +92,12 @@ function doctorBuildReport(array $config, string $basePath): array
     $composePath = $basePath . DIRECTORY_SEPARATOR . 'docker' . DIRECTORY_SEPARATOR . 'docker-compose.yml';
     $dockerfilePath = $basePath . DIRECTORY_SEPARATOR . 'docker' . DIRECTORY_SEPARATOR . 'Dockerfile';
     $appEnv = strtolower(trim((string) ($config['APP_ENV'] ?? 'development')));
+    $appRuntime = strtolower(trim((string) ($config['APP_RUNTIME'] ?? 'docker')));
     $driver = strtolower(trim((string) ($config['DB_DRIVER'] ?? '')));
 
     $checks[] = is_file($envPath)
         ? doctorCheck('pass', 'ENV_FILE_PRESENT', '.env is present.', null)
-        : doctorCheck('error', 'ENV_FILE_MISSING', '.env is missing.', 'Run "./pachybase env:init" and review the generated values.');
+        : doctorCheck('error', 'ENV_FILE_MISSING', '.env is missing.', 'Run "./pachybase env:sync" and review the generated values.');
 
     if (in_array($appEnv, ['development', 'production'], true)) {
         $checks[] = doctorCheck('pass', 'APP_ENV_VALID', sprintf('APP_ENV is set to "%s".', $appEnv), null);
@@ -106,6 +107,17 @@ function doctorBuildReport(array $config, string $basePath): array
             'APP_ENV_INVALID',
             sprintf('APP_ENV "%s" is not supported.', $appEnv === '' ? '(empty)' : $appEnv),
             'Use "development" or "production".'
+        );
+    }
+
+    if (in_array($appRuntime, ['docker', 'local'], true)) {
+        $checks[] = doctorCheck('pass', 'APP_RUNTIME_VALID', sprintf('APP_RUNTIME is set to "%s".', $appRuntime), null);
+    } else {
+        $checks[] = doctorCheck(
+            'error',
+            'APP_RUNTIME_INVALID',
+            sprintf('APP_RUNTIME "%s" is not supported.', $appRuntime === '' ? '(empty)' : $appRuntime),
+            'Use "docker" or "local".'
         );
     }
 
@@ -174,6 +186,19 @@ function doctorBuildReport(array $config, string $basePath): array
     }
 
     $jwtSecret = trim((string) ($config['AUTH_JWT_SECRET'] ?? ''));
+    $appKey = trim((string) ($config['APP_KEY'] ?? ''));
+
+    if ($appKey === '') {
+        $checks[] = doctorCheck(
+            $appEnv === 'production' ? 'error' : 'warning',
+            'APP_KEY_MISSING',
+            'APP_KEY is not configured.',
+            'Run "./pachybase app:key" to generate the application key.'
+        );
+    } else {
+        $checks[] = doctorCheck('pass', 'APP_KEY_PRESENT', 'APP_KEY is configured.', null);
+    }
+
     if ($appEnv === 'production' && $jwtSecret === '') {
         $checks[] = doctorCheck(
             'error',
@@ -192,6 +217,18 @@ function doctorBuildReport(array $config, string $basePath): array
         $checks[] = doctorCheck('pass', 'AUTH_JWT_SECRET_PRESENT', 'AUTH_JWT_SECRET is configured.', null);
     }
 
+    $appUrl = trim((string) ($config['APP_URL'] ?? ''));
+    if ($appUrl === '') {
+        $checks[] = doctorCheck(
+            'warning',
+            'APP_URL_MISSING',
+            'APP_URL is not configured.',
+            'Set APP_URL to make CLI access messages explicit.'
+        );
+    } else {
+        $checks[] = doctorCheck('pass', 'APP_URL_PRESENT', sprintf('APP_URL is set to "%s".', $appUrl), null);
+    }
+
     $defaultAdminEmail = 'admin@pachybase.local';
     $defaultAdminPassword = 'pachybase123';
     $bootstrapEmail = strtolower(trim((string) ($config['AUTH_BOOTSTRAP_ADMIN_EMAIL'] ?? $defaultAdminEmail)));
@@ -208,8 +245,8 @@ function doctorBuildReport(array $config, string $basePath): array
         $checks[] = doctorCheck('pass', 'BOOTSTRAP_ADMIN_REVIEWED', 'Bootstrap admin credentials were reviewed.', null);
     }
 
-    $checks[] = doctorInspectDockerCompose($composePath, $driver);
-    $checks[] = doctorInspectDockerfile($dockerfilePath);
+    $checks[] = doctorInspectDockerCompose($composePath, $driver, $appRuntime);
+    $checks[] = doctorInspectDockerfile($dockerfilePath, $appRuntime);
 
     $summary = [
         'passed' => count(array_filter($checks, static fn(array $check): bool => $check['status'] === 'pass')),
@@ -241,14 +278,14 @@ function doctorCheck(string $status, string $code, string $message, ?string $hin
 /**
  * @return array{status: string, code: string, message: string, hint: string|null}
  */
-function doctorInspectDockerCompose(string $composePath, string $driver): array
+function doctorInspectDockerCompose(string $composePath, string $driver, string $appRuntime): array
 {
     if (!is_file($composePath)) {
         return doctorCheck(
-            'warning',
+            $appRuntime === 'docker' ? 'error' : 'warning',
             'DOCKER_COMPOSE_MISSING',
             'docker/docker-compose.yml is not present yet.',
-            'Run "./pachybase docker:install" to generate the local stack.'
+            'Run "./pachybase docker:sync" to generate the local stack.'
         );
     }
 
@@ -267,7 +304,7 @@ function doctorInspectDockerCompose(string $composePath, string $driver): array
             'warning',
             'DOCKER_COMPOSE_DRIVER_MISMATCH',
             'docker/docker-compose.yml does not look aligned with DB_DRIVER=mysql.',
-            'Regenerate the Compose file with "./pachybase docker:install".'
+            'Regenerate the Compose file with "./pachybase docker:sync".'
         );
     }
 
@@ -276,7 +313,7 @@ function doctorInspectDockerCompose(string $composePath, string $driver): array
             'warning',
             'DOCKER_COMPOSE_DRIVER_MISMATCH',
             'docker/docker-compose.yml does not look aligned with DB_DRIVER=pgsql.',
-            'Regenerate the Compose file with "./pachybase docker:install".'
+            'Regenerate the Compose file with "./pachybase docker:sync".'
         );
     }
 
@@ -286,11 +323,11 @@ function doctorInspectDockerCompose(string $composePath, string $driver): array
 /**
  * @return array{status: string, code: string, message: string, hint: string|null}
  */
-function doctorInspectDockerfile(string $dockerfilePath): array
+function doctorInspectDockerfile(string $dockerfilePath, string $appRuntime): array
 {
     if (!is_file($dockerfilePath)) {
         return doctorCheck(
-            'error',
+            $appRuntime === 'docker' ? 'error' : 'warning',
             'DOCKERFILE_MISSING',
             'docker/Dockerfile is missing.',
             'Restore the Dockerfile before publishing.'

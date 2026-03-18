@@ -5,7 +5,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Overview',
-      items: ['intro', 'architecture', 'install', 'configuration', 'supported-databases'],
+      items: ['intro', 'architecture', 'install', 'docker-install', 'local-install', 'configuration', 'supported-databases'],
     },
     {
       type: 'category',
@@ -22,7 +22,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Operations',
-      items: ['cli', 'testing', 'docker-install'],
+      items: ['cli', 'testing'],
     },
     {
       type: 'category',

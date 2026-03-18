@@ -11,7 +11,7 @@ PachyBase e uma base backend self-hosted em PHP focada em APIs JSON previsiveis,
 
 ## O que um dev novo consegue fazer hoje
 
-- Instalar a stack com Docker e uma unica CLI
+- Instalar a stack rapidamente com Docker ou manualmente na maquina host
 - Configurar a aplicacao via `.env` e arquivos PHP declarativos
 - Expor CRUD automatico para entidades habilitadas sem escrever controller por recurso
 - Autenticar com JWT ou API tokens
@@ -21,11 +21,11 @@ PachyBase e uma base backend self-hosted em PHP focada em APIs JSON previsiveis,
 ## Principios atuais
 
 - Respostas previsiveis com um contrato externo fixo
-- Desenvolvimento local simples com Docker
+- Onboarding docker-first com trilha oficial alternativa para instalacao local
 - Pontos claros de extensao para rotas, modulos e geracao de CRUD
 - Documentacao que pode ser consumida em ingles e portugues do Brasil
 
-## Inicio rapido
+## Inicio rapido (Docker)
 
 ```bash
 cp .env.example .env
@@ -41,11 +41,15 @@ Depois que a stack subir:
 - Schema para IA: `http://localhost:8080/ai/schema`
 - Admin de desenvolvimento: `admin@pachybase.local` / `pachybase123`
 
+Para a arvore completa de instalacao, comece por [Instalacao](./install.md). Docker e a trilha principal, e [Instalacao local](./local-install.md) e a alternativa oficial manual.
+
 ## Mapa da documentacao
 
 ### Produto e setup
 
 - [Instalacao](./install.md)
+- [Instalacao com Docker](./docker-install.md)
+- [Instalacao local](./local-install.md)
 - [Configuracao](./configuration.md)
 - [Bancos suportados](./supported-databases.md)
 - [Arquitetura](./architecture.md)
@@ -63,7 +67,6 @@ Depois que a stack subir:
 
 - [CLI](./cli.md)
 - [Testes](./testing.md)
-- [Instalacao Docker](./docker-install.md)
 - [Exemplos](./examples.md)
 - [Contribuicoes](./contributing.md)
 - [Roadmap](./roadmap.md)

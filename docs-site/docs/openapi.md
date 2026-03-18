@@ -46,8 +46,8 @@ This improves:
 You can export the current runtime contract to a file:
 
 ```bash
-./pachybase openapi:generate
-./pachybase openapi:generate --output=docs-site/static/openapi.json
+./pachybase openapi:build
+./pachybase openapi:build --output=docs-site/static/openapi.json
 ```
 
 On Windows, use `.\pachybase.bat`.

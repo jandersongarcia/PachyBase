@@ -6,7 +6,12 @@ sidebar_position: 2
 
 # Instalacao
 
-O PachyBase pode ser instalado no Windows e no Linux usando apenas Docker e Docker Compose. O Composer roda dentro do container PHP durante o setup.
+O PachyBase agora tem duas trilhas oficiais de instalacao:
+
+- Instalacao com Docker: trilha principal e mais rapida para a maioria dos times
+- Instalacao local: trilha manual oficial para times que querem rodar PHP, Composer e banco direto na maquina host
+
+Escolha a trilha que combina com o seu ambiente. As duas funcionam em Windows e Linux.
 
 ## Repositorio
 
@@ -26,66 +31,63 @@ cd pachybase
 2. Extraia os arquivos do projeto.
 3. Abra a pasta extraida.
 
-## Fluxo recomendado
+## Guia rapido de decisao
 
-A entrada preferencial agora e a CLI do projeto:
+Escolha [Instalacao com Docker](./docker-install.md) se voce quer:
+
+- o setup suportado mais rapido
+- o fluxo padrao de onboarding
+- usar os comandos do projeto via `./pachybase` ou `.\pachybase.bat`
+- provisioning automatico do banco
+
+Escolha [Instalacao local](./local-install.md) se voce quer:
+
+- PHP, Composer e banco gerenciados direto na maquina host
+- desenvolvimento sem dependencia de Docker
+- controle direto sobre runtime e servicos de banco mantendo a mesma CLI do projeto
+
+## Trilha 1: Instalacao com Docker
+
+Essa e a trilha principal e o melhor ponto de partida.
 
 ```bash
-./pachybase env:init
+cp .env.example .env
 ./pachybase install
+./pachybase doctor
 ```
 
 No Windows, troque `./pachybase` por `.\pachybase.bat`.
 
-## Etapa manual obrigatoria
+Leia o guia completo: [Instalacao com Docker](./docker-install.md)
 
-Antes de rodar o instalador, crie `.env` a partir de `.env.example` e preencha as configuracoes do banco. Essa etapa e obrigatoria porque `DB_DRIVER` define qual container de banco sera gerado durante o setup.
+## Trilha 2: Instalacao local
+
+Essa e a trilha oficial alternativa para times que nao querem o runtime dentro do Docker.
+
+Fluxo tipico:
 
 ```bash
 cp .env.example .env
+composer install
+# ajuste APP_RUNTIME=local e os valores de DB_*
+./pachybase install
+./pachybase status
 ```
 
-## Windows
-
-Depois de configurar o `.env`, rode isto no PowerShell ou Prompt de Comando, na raiz do projeto:
-
-```powershell
-.\install.bat
-```
-
-## Linux
-
-Depois de configurar o `.env`, rode isto no terminal, na raiz do projeto:
+Os comandos PHP diretos continuam disponiveis quando voce quiser operar etapa por etapa:
 
 ```bash
-chmod +x install.sh
-./install.sh
+cp .env.example .env
+composer install
+php scripts/bootstrap-database.php
+php -S 127.0.0.1:8080 -t public public/router.php
 ```
 
-## Proximo passo
+Leia o guia completo: [Instalacao local](./local-install.md)
 
-Os instaladores executam o mesmo fluxo:
+## Pronto para release
 
-1. Leem a configuracao do banco no `.env`.
-2. Geram `docker/docker-compose.yml` com base na configuracao do banco.
-3. Fazem o build da imagem PHP com Composer disponivel dentro do Docker.
-4. Executam `composer install` dentro do container PHP.
-5. Sobem os containers.
-6. Esperam o banco ficar pronto.
-7. Executam automaticamente as migrations e seeds padrao.
+Antes de compartilhar o ambiente com outros devs ou publicar uma release candidate, rode as verificacoes da trilha escolhida:
 
-Depois que o instalador termina, o ambiente local ja inclui:
-
-- a tabela de controle de migrations
-- a tabela de controle de seeds
-- as tabelas-base do sistema
-- os dados iniciais padrao
-
-Para reconstruir o ambiente local completo sem trabalho manual no banco:
-
-```bash
-docker compose -f docker/docker-compose.yml down -v
-./install.sh
-```
-
-Depois que o codigo estiver localmente disponivel, siga para [CLI](./cli.md) e [Instalacao Docker](./docker-install.md).
+- Trilha Docker: `./pachybase doctor`
+- Trilha local: `./pachybase doctor` (ou `php scripts/doctor.php` se voce quiser o entrypoint PHP direto)

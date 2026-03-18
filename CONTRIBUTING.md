@@ -25,4 +25,4 @@ On Windows, use `.\pachybase.bat`.
 - Document new environment variables and operational steps.
 - Reflect contract changes in OpenAPI or AI docs when relevant.
 
-See the full guide in [`docs-site/docs/contributing.md`](docs-site/docs/contributing.md).
+See the published guide at <https://jandersongarcia.github.io/pachybase/contributing>.

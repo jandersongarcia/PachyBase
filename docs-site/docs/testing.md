@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # Testing
 
-Phase 12 establishes a regression-focused automated test suite around the core runtime, the HTTP contract, database infrastructure, machine-readable surfaces, and the project CLI.
+The current regression suite protects the core runtime, the HTTP contract, the database infrastructure, the machine-readable surfaces, and the project CLI.
 
 ## Run the suite
 
@@ -25,7 +25,15 @@ On Windows, use:
 ### Direct Docker execution
 
 ```bash
-docker compose -f docker/docker-compose.yml run --rm php php vendor/bin/phpunit --testdox
+docker compose -f docker/docker-compose.yml run --rm php vendor/bin/phpunit --testdox
+```
+
+### Local installation execution
+
+If you are using the host-managed runtime instead of Docker:
+
+```bash
+vendor/bin/phpunit --testdox
 ```
 
 ## Release readiness
@@ -34,9 +42,17 @@ Run the release check alongside the test suite:
 
 ```bash
 ./pachybase doctor
+./pachybase env:validate
+./pachybase status
 ```
 
-This command validates production-sensitive configuration, supported database drivers, and Docker posture before publication.
+For local installation, run:
+
+```bash
+php scripts/doctor.php
+```
+
+These commands validate production-sensitive configuration, supported database drivers, and runtime posture before publication.
 
 ## Coverage matrix
 
@@ -51,8 +67,8 @@ This command validates production-sensitive configuration, supported database dr
 - Authentication and authorization: `tests/Auth/JwtCodecTest.php`, `tests/Auth/AuthServiceIntegrationTest.php`, `tests/Auth/AuthorizationServiceTest.php`, `tests/Auth/RequireBearerTokenTest.php`, and `tests/Api/AuthHttpKernelTest.php`
 - AI-friendly discovery endpoints: `tests/Services/Ai/AiSchemaServiceIntegrationTest.php` and `tests/Api/AiHttpKernelTest.php`
 - OpenAPI generation and publication: `tests/Services/OpenApi/OpenApiDocumentBuilderTest.php`, `tests/Api/OpenApiHttpKernelTest.php`, and `tests/Scripts/OpenApiGenerateTest.php`
-- CLI and developer tooling: `tests/Cli/PachybaseCliTest.php`, `tests/Scripts/CrudSyncTest.php`, and `tests/Scripts/DockerInstallTest.php`
-- Docker-oriented integration surface, when applicable: `tests/Scripts/DockerInstallTest.php` plus the containerized PHPUnit execution path used by `pachybase test`
+- CLI and developer tooling: `tests/Cli/PachybaseCliTest.php`, `tests/Cli/EnvironmentFileManagerTest.php`, `tests/Scripts/CrudSyncTest.php`, `tests/Scripts/DockerInstallTest.php`, and `tests/Scripts/AiBuildTest.php`
+- Docker-backed integration surface, when applicable: `tests/Scripts/DockerInstallTest.php` plus the containerized PHPUnit execution path used by `pachybase test`
 
 ## Regression policy
 
@@ -63,4 +79,4 @@ This command validates production-sensitive configuration, supported database dr
 
 ## Current expectation
 
-The Phase 12 completion bar is that the central features keep a minimum automated safety net before new phases expand behavior further.
+The central features should always keep a minimum automated safety net before new runtime changes expand behavior further.

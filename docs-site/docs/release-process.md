@@ -12,7 +12,7 @@ PachyBase `1.0.0-rc.1` adds a release-oriented workflow so the repository can be
 1. Review the root `VERSION` file.
 2. Run `./pachybase doctor`.
 3. Run `./pachybase test`.
-4. Generate `build/openapi.json` with `./pachybase openapi:generate`.
+4. Generate `build/openapi.json` with `./pachybase openapi:build`.
 5. Review `CHANGELOG.md`, `RELEASE_NOTES.md`, and `PUBLISHING_CHECKLIST.md`.
 
 ## What `doctor` checks

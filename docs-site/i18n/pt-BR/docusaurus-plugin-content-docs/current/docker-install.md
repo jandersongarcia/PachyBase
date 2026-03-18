@@ -1,12 +1,12 @@
 ---
 id: docker-install
-title: Instalacao Docker
+title: Instalacao com Docker
 sidebar_position: 3
 ---
 
-# Instalacao Docker
+# Instalacao com Docker
 
-O PachyBase pode provisionar sua stack Docker local diretamente pelo Docker, sem exigir Composer instalado na maquina host.
+Docker e a trilha principal de instalacao do PachyBase. Ela provisiona a stack local sem exigir Composer instalado na maquina host.
 
 Antes de executar o instalador Docker, obtenha o codigo-fonte pelo [GitHub](https://github.com/jandersongarcia/pachybase) ou pelo [download do ZIP do projeto](https://github.com/jandersongarcia/pachybase/archive/refs/heads/main.zip).
 
@@ -25,8 +25,8 @@ DB_DRIVER=mysql
 DB_HOST=db
 DB_PORT=3306
 DB_DATABASE=pachybase
-DB_USERNAME=root
-DB_PASSWORD=root
+DB_USERNAME=pachybase
+DB_PASSWORD=change_this_password
 ```
 
 Drivers de banco suportados:
@@ -34,34 +34,53 @@ Drivers de banco suportados:
 - `mysql`
 - `pgsql`
 
-## Fluxo de instalacao
+## Fluxo de instalacao recomendado
 
 ### Windows
 
 ```powershell
-.\install.bat
+Copy-Item .env.example .env
+.\pachybase.bat install
 ```
 
 ### Linux
 
 ```bash
-chmod +x install.sh
-./install.sh
+cp .env.example .env
+chmod +x pachybase
+./pachybase install
 ```
 
-O instalador executa estas etapas:
+O fluxo `install` da CLI executa estas etapas:
 
-1. Valida a configuracao do banco no `.env`.
-2. Gera `docker/docker-compose.yml`.
-3. Faz o build da imagem PHP com Composer disponivel dentro do container.
-4. Executa `composer install` dentro do container PHP.
-5. Sobe os containers com `docker compose up -d`.
-6. Espera o banco ficar pronto.
-7. Executa automaticamente as migrations e seeds padrao.
+1. Sincroniza `.env` a partir de `.env.example` quando necessario e valida a configuracao final.
+2. Configura `APP_KEY` e defaults de auth quando eles ainda nao existem.
+3. Gera `docker/docker-compose.yml`.
+4. Sobe o runtime Docker.
+5. Aguarda o banco, aplica migrations e executa seeds.
+6. Gera `build/openapi.json` e `build/ai-schema.json`.
+
+## Wrappers legados de setup
+
+`install.sh` e `install.bat` continuam disponiveis quando voce quer chamar os wrappers de setup Docker diretamente. Eles ainda fazem o build da imagem PHP, instalam dependencias Composer no container, geram `docker/docker-compose.yml`, sobem a stack e fazem bootstrap do banco, mas a CLI continua sendo o entrypoint canonico da documentacao.
+
+## Por que essa e a trilha principal
+
+- E o setup suportado mais rapido.
+- A CLI do projeto foi desenhada em torno dessa trilha.
+- Ela mantem PHP, Composer e banco alinhados com o ambiente documentado.
+- Ela reduz diferencas entre maquinas de contribuidores.
 
 ## Observacoes de configuracao
 
 O instalador nao cria `.env` automaticamente. Configure esse arquivo manualmente antes de rodar o setup.
+
+```bash
+./pachybase status
+./pachybase docker:logs
+./pachybase stop
+./pachybase start
+```
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
@@ -73,3 +92,5 @@ Se necessario, voce tambem pode rodar novamente o bootstrap do banco manualmente
 ```bash
 docker compose -f docker/docker-compose.yml exec php php scripts/bootstrap-database.php
 ```
+
+Antes de compartilhar o ambiente com outros devs ou publicar uma release candidate, rode `./pachybase doctor`.

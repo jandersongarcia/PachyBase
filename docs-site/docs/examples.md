@@ -55,7 +55,7 @@ curl -X POST http://localhost:8080/api/system-settings \
 ## 6. Export OpenAPI and inspect AI metadata
 
 ```bash
-./pachybase openapi:generate --output=build/openapi.json
+./pachybase openapi:build --output=build/openapi.json
 curl http://localhost:8080/ai/schema
 curl http://localhost:8080/ai/entity/system-settings
 ```

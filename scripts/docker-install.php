@@ -67,7 +67,7 @@ function ensureCommandAvailable(string $command, string $label): void
     exec($command . ' 2>&1', $output, $exitCode);
 
     if ($exitCode !== 0) {
-        fail($label . ' is required to run composer docker-install.');
+        fail($label . ' is required to generate the Docker runtime configuration.');
     }
 }
 
@@ -151,7 +151,7 @@ function validateDatabaseConfig(array $config): array
 
     if ($config['DB_HOST'] !== $supportedDrivers[$driver]['host']) {
         fail(sprintf(
-            'DB_HOST must be "%s" when using composer docker-install.',
+            'DB_HOST must be "%s" when generating the Docker runtime configuration.',
             $supportedDrivers[$driver]['host']
         ));
     }
