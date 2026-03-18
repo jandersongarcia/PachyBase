@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   web:
-    image: nginx:latest
+    image: nginx:1.27-alpine
     ports:
       - "8080:80"
     volumes:
@@ -13,8 +11,9 @@ services:
 
   php:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
+    working_dir: /var/www/html
     volumes:
       - ../:/var/www/html
     depends_on:
@@ -24,12 +23,13 @@ services:
     image: mysql:8
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "pachydbase"
-    ports:
-      - "3306:3306"
+      MYSQL_ROOT_PASSWORD: "change_this_password"
+      MYSQL_DATABASE: "pachybase"
+      MYSQL_USER: "pachybase"
+      MYSQL_PASSWORD: "change_this_password"
     volumes:
       - db_data:/var/lib/mysql
 
 volumes:
   db_data:
+

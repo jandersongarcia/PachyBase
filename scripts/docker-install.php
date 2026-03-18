@@ -6,7 +6,9 @@ $rootPath = dirname(__DIR__);
 $envPath = $rootPath . DIRECTORY_SEPARATOR . '.env';
 $composePath = $rootPath . DIRECTORY_SEPARATOR . 'docker' . DIRECTORY_SEPARATOR . 'docker-compose.yml';
 
-main($argv, $rootPath, $envPath, $composePath);
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    main($argv, $rootPath, $envPath, $composePath);
+}
 
 function main(array $argv, string $rootPath, string $envPath, string $composePath): void
 {
@@ -40,6 +42,7 @@ function main(array $argv, string $rootPath, string $envPath, string $composePat
     );
 
     runCommand($command, 'Unable to start Docker containers.');
+    bootstrapDatabase($composePath);
 
     output('PachyBase is running at http://localhost:8080');
 }
@@ -64,7 +67,7 @@ function ensureCommandAvailable(string $command, string $label): void
     exec($command . ' 2>&1', $output, $exitCode);
 
     if ($exitCode !== 0) {
-        fail($label . ' is required to run composer docker-install.');
+        fail($label . ' is required to generate the Docker runtime configuration.');
     }
 }
 
@@ -148,7 +151,7 @@ function validateDatabaseConfig(array $config): array
 
     if ($config['DB_HOST'] !== $supportedDrivers[$driver]['host']) {
         fail(sprintf(
-            'DB_HOST must be "%s" when using composer docker-install.',
+            'DB_HOST must be "%s" when generating the Docker runtime configuration.',
             $supportedDrivers[$driver]['host']
         ));
     }
@@ -172,11 +175,9 @@ function buildDockerCompose(array $config): string
     $databaseService = buildDatabaseService($config);
 
     return implode(PHP_EOL, [
-        'version: "3.9"',
-        '',
         'services:',
         '  web:',
-        '    image: nginx:latest',
+        '    image: nginx:1.27-alpine',
         '    ports:',
         '      - "8080:80"',
         '    volumes:',
@@ -187,8 +188,9 @@ function buildDockerCompose(array $config): string
         '',
         '  php:',
         '    build:',
-        '      context: .',
-        '      dockerfile: Dockerfile',
+        '      context: ..',
+        '      dockerfile: docker/Dockerfile',
+        '    working_dir: /var/www/html',
         '    volumes:',
         '      - ../:/var/www/html',
         '    depends_on:',
@@ -199,8 +201,6 @@ function buildDockerCompose(array $config): string
         '    restart: unless-stopped',
         '    environment:',
         $databaseService['environment'],
-        '    ports:',
-        '      - "' . $config['DB_PORT'] . ':' . $config['DB_PORT'] . '"',
         '    volumes:',
         '      - db_data:' . $config['DB_VOLUME_PATH'],
         '',
@@ -214,7 +214,7 @@ function buildDatabaseService(array $config): array
 {
     if ($config['DB_DRIVER'] === 'mysql') {
         $environment = [
-            '      MYSQL_ROOT_PASSWORD: ' . yamlScalar($config['DB_PASSWORD']),
+            '      MYSQL_ROOT_PASSWORD: ' . yamlScalar(rootPassword($config)),
             '      MYSQL_DATABASE: ' . yamlScalar($config['DB_DATABASE']),
         ];
 
@@ -240,6 +240,13 @@ function yamlScalar(string $value): string
     return '"' . addcslashes($value, "\\\"") . '"';
 }
 
+function rootPassword(array $config): string
+{
+    return strtolower($config['DB_USERNAME']) === 'root'
+        ? $config['DB_PASSWORD']
+        : bin2hex(random_bytes(16));
+}
+
 function runCommand(string $command, string $errorMessage): void
 {
     passthru($command, $exitCode);
@@ -247,6 +254,16 @@ function runCommand(string $command, string $errorMessage): void
     if ($exitCode !== 0) {
         fail($errorMessage);
     }
+}
+
+function bootstrapDatabase(string $composePath): void
+{
+    $command = sprintf(
+        'docker compose -f %s exec -T php php scripts/bootstrap-database.php',
+        escapeshellarg($composePath)
+    );
+
+    runCommand($command, 'Unable to bootstrap the database schema and seeds.');
 }
 
 function output(string $message): void

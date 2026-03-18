@@ -1,28 +1,138 @@
 # PachyBase
 
-<p align="center">
-  <img src="assets/logo.png" width="200" alt="PachyBase Logo">
-</p>
+PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
 
-# PachyBase
+Current stage: release candidate `1.0.0-rc.1`
 
-PachyBase is an open-source, self-hosted backend foundation built with PHP, focused on predictable JSON APIs, modular architecture, and simple local development through Docker.
+## Quick start (Docker)
 
-The project is designed for developers who want more control over their backend stack, infrastructure, and deployment flow without depending on external BaaS platforms.
+```bash
+cp .env.example .env
+./pachybase install
+```
 
-## Highlights
+On Windows:
 
-- API-first approach
-- Predictable JSON response structure
-- Modular and extensible architecture
-- Self-hosted and Docker-ready
-- Support for different database drivers
-- PHP 8+ oriented structure
-- Clean and maintainable codebase
+```powershell
+Copy-Item .env.example .env
+.\pachybase.bat install
+```
 
-## Standard API Response
+After installation:
 
-All responses should follow the project standard:
+- API base URL: `http://localhost:8080`
+- OpenAPI document: `http://localhost:8080/openapi.json`
+- AI schema: `http://localhost:8080/ai/schema`
+- Development admin: `admin@pachybase.local` / `pachybase123`
+
+Before exposing the project to third parties, run:
+
+```bash
+./pachybase doctor
+```
+
+## Installation paths
+
+PachyBase documents two official installation paths:
+
+- Docker-first quick start for the fastest supported setup
+- Local installation for teams that want PHP, Composer, and the database directly on the host while keeping the same project CLI
+
+Documentation entry points:
+
+- Install overview: <https://jandersongarcia.github.io/pachybase/install>
+- Install with Docker: <https://jandersongarcia.github.io/pachybase/docker-install>
+- Local installation: <https://jandersongarcia.github.io/pachybase/local-install>
+
+## What is included today
+
+- Predictable JSON API contract with a fixed success/error envelope
+- Docker-first installation and project CLI
+- MySQL and PostgreSQL support
+- Migrations, seeds, and database bootstrap
+- JWT access tokens and API tokens
+- Automatic CRUD driven by `config/CrudEntities.php`
+- Generated OpenAPI 3.0.3 document
+- AI-friendly discovery endpoints
+- PHPUnit regression suite
+
+## Runtime surface
+
+Core routes:
+
+- `GET /`
+- `GET /openapi.json`
+- `GET /ai/schema`
+- `GET /ai/entities`
+- `GET /ai/entity/{name}`
+
+Authentication routes:
+
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/revoke`
+- `GET /api/auth/me`
+- `POST /api/auth/tokens`
+- `DELETE /api/auth/tokens/{id}`
+
+Automatic CRUD routes:
+
+- `GET /api/{entity}`
+- `GET /api/{entity}/{id}`
+- `POST /api/{entity}`
+- `PUT /api/{entity}/{id}`
+- `PATCH /api/{entity}/{id}`
+- `DELETE /api/{entity}/{id}`
+
+## Configuration
+
+PachyBase reads runtime settings from `.env`.
+
+Required values:
+
+```env
+APP_NAME=PachyBase
+APP_ENV=development
+APP_DEBUG=true
+APP_RUNTIME=docker
+APP_HOST=127.0.0.1
+APP_PORT=8080
+APP_URL=http://localhost:8080
+
+DB_DRIVER=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=pachybase
+DB_USERNAME=pachybase
+DB_PASSWORD=change_this_password
+```
+
+Optional values include:
+
+- `APP_KEY`
+- `DB_SCHEMA` for PostgreSQL
+- `AUTH_JWT_SECRET`
+- `AUTH_JWT_ISSUER`
+- `AUTH_ACCESS_TTL_MINUTES`
+- `AUTH_REFRESH_TTL_DAYS`
+- `AUTH_BOOTSTRAP_ADMIN_EMAIL`
+- `AUTH_BOOTSTRAP_ADMIN_PASSWORD`
+- `AUTH_BOOTSTRAP_ADMIN_NAME`
+
+Declarative CRUD behavior lives in [`config/CrudEntities.php`](config/CrudEntities.php).
+
+## Supported databases
+
+Officially supported drivers:
+
+- `mysql`
+- `pgsql`
+
+Docker generation, adapter selection, schema inspection, migrations, seeds, CRUD metadata, OpenAPI generation, and tests are all aligned around these two drivers.
+
+## API contract
+
+Every response follows the same envelope:
 
 ```json
 {
@@ -39,104 +149,169 @@ All responses should follow the project standard:
 }
 ```
 
-Error responses keep the same outer structure:
+Validation, authentication, authorization, conflict, and server failures keep the same outer structure.
 
-```json
-{
-  "success": false,
-  "data": null,
-  "meta": {
-    "contract_version": "1.0",
-    "request_id": "b0bb2f930d4b4f5ab9e2d1f7b74b9df6",
-    "timestamp": "2026-03-11T03:00:00+00:00",
-    "path": "/users",
-    "method": "POST"
-  },
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "type": "application_error",
-    "message": "The request payload is invalid.",
-    "details": []
-  }
-}
-```
+## Authentication
 
-### Contract goals
+PachyBase supports:
 
-- `success` is always a boolean.
-- `data` always exists, even when `null`.
-- `meta` always exists and carries machine-readable request context.
-- `error` is always `null` on success or a fixed object on failure.
-- The API never mixes plain text, HTML, and JSON for different failure modes.
+- JWT access tokens for web/mobile clients
+- refresh tokens through `pb_auth_sessions`
+- API tokens for server-to-server access
 
-### Current implementation
+Protected endpoints expect `Authorization: Bearer <token>`.
 
-- [`public/index.php`](./public/index.php) responds through a centralized JSON contract and acts as the front controller.
-- [`core/Http/Router.php`](./core/Http/Router.php) provides a simple and fast routing engine.
-- [`core/Http/Request.php`](./core/Http/Request.php) abstracts incoming HTTP requests safely.
-- [`core/Http/ApiResponse.php`](./core/Http/ApiResponse.php) is the single response formatter.
-- [`core/Http/ErrorHandler.php`](./core/Http/ErrorHandler.php) converts PHP errors and exceptions into the same API structure.
+## Automatic CRUD, filters, and pagination
 
-## Routing and Controllers
+CRUD exposure is driven by `config/CrudEntities.php`.
 
-Routes are registered in `public/index.php` using the `$router` instance. 
-You can map routes directly to Controller classes within the `core/Controllers/` namespace.
+The current runtime supports:
+
+- pagination with `page` and `per_page`
+- equality filters with `filter[field]=value`
+- sorting with `sort=field` and `sort=-field`
+- search with `search=term`
 
 Example:
 
-```php
-use PachyBase\Controllers\SystemController;
-
-$router->get('/status', [SystemController::class, 'status']);
+```bash
+curl "http://localhost:8080/api/system-settings?filter[is_public]=1&sort=setting_key" \
+  -H "Authorization: Bearer <access-token>"
 ```
 
-And your Controller method receives the abstracted `Request` object:
+## OpenAPI and AI endpoints
 
-```php
-namespace PachyBase\Controllers;
-
-use PachyBase\Http\Request;
-use PachyBase\Http\ApiResponse;
-
-class SystemController
-{
-    public function status(Request $request): void
-    {
-        // Example reading a query param: ?verbose=true
-        $isVerbose = $request->query('verbose', false);
-        
-        // Example reading JSON body on POST
-        // $data = $request->json('field_name');
-
-        ApiResponse::success(['system' => 'ok']);
-    }
-}
-```
-
-## Docker install
-
-Configure the database connection in [`.env`](./.env). It supports `mysql` and `pgsql`:
-
-```env
-DB_DRIVER=mysql
-DB_HOST=db
-DB_PORT=3306
-DB_DATABASE=pachybase
-DB_USERNAME=root
-DB_PASSWORD=root
-```
-
-Then run:
+OpenAPI:
 
 ```bash
-composer install
-composer docker-install
+curl http://localhost:8080/openapi.json
+./pachybase openapi:build --output=build/openapi.json
 ```
 
-The `docker-install` script is a smart automation tool that:
-1. Validates your database settings.
-2. Generates a custom `docker/Dockerfile` to compile PHP 8.2 with the exact PDO extensions required by your driver.
-3. Configures an Nginx container (`docker/nginx.conf`) to handle URL rewriting.
-4. Generates a tailored `docker/docker-compose.yml` and starts the containers.
+AI-friendly endpoints:
 
-Once running, PachyBase is accessible at **`http://localhost:8080`**.
+```bash
+curl http://localhost:8080/ai/schema
+curl http://localhost:8080/ai/entities
+curl http://localhost:8080/ai/entity/system-settings
+```
+
+## CLI
+
+Lifecycle:
+
+- `install`
+- `start`
+- `stop`
+- `doctor`
+- `status`
+- `test`
+
+Environment:
+
+- `env:sync`
+- `env:validate`
+- `app:key`
+
+Docker:
+
+- `docker:sync`
+- `docker:up`
+- `docker:down`
+- `docker:logs`
+
+Database:
+
+- `db:setup`
+- `db:migrate`
+- `db:rollback`
+- `db:seed`
+- `db:fresh`
+
+Scaffolding:
+
+- `make:module`
+- `make:entity`
+- `make:migration`
+- `make:seed`
+- `make:controller`
+- `make:service`
+- `make:middleware`
+- `make:test`
+- `crud:generate`
+
+Build and inspection:
+
+- `auth:install`
+- `entity:list`
+- `crud:sync`
+- `openapi:build`
+- `ai:build`
+- `version`
+
+Legacy aliases such as `env:init`, `docker:install`, `release:check`, and `openapi:generate` still resolve for backward compatibility, but the canonical command names are the ones listed above.
+
+## Documentation
+
+Published docs:
+
+- English: <https://jandersongarcia.github.io/pachybase/>
+- Portuguese: <https://jandersongarcia.github.io/pachybase/pt-BR/>
+
+The `docs-site/` workspace remains in the Git repository for documentation authoring, but it is excluded from release archives to keep the distributed package focused on the runtime.
+
+Recommended entry points:
+
+- [Overview](https://jandersongarcia.github.io/pachybase/)
+- [Install](https://jandersongarcia.github.io/pachybase/install)
+- [Install with Docker](https://jandersongarcia.github.io/pachybase/docker-install)
+- [Local Installation](https://jandersongarcia.github.io/pachybase/local-install)
+- [Configuration](https://jandersongarcia.github.io/pachybase/configuration)
+- [Supported Databases](https://jandersongarcia.github.io/pachybase/supported-databases)
+- [API Contract](https://jandersongarcia.github.io/pachybase/api-contract)
+- [Authentication and Authorization](https://jandersongarcia.github.io/pachybase/auth-security)
+- [Automatic CRUD](https://jandersongarcia.github.io/pachybase/automatic-crud)
+- [Filters and Pagination](https://jandersongarcia.github.io/pachybase/filters-pagination)
+- [OpenAPI](https://jandersongarcia.github.io/pachybase/openapi)
+- [AI Endpoints](https://jandersongarcia.github.io/pachybase/ai-endpoints)
+- [CLI](https://jandersongarcia.github.io/pachybase/cli)
+- [Contributing](https://jandersongarcia.github.io/pachybase/contributing)
+- [Roadmap](https://jandersongarcia.github.io/pachybase/roadmap)
+- [Examples](https://jandersongarcia.github.io/pachybase/examples)
+- [Release Process](https://jandersongarcia.github.io/pachybase/release-process)
+
+To work on the docs site locally from the Git repository:
+
+```bash
+cd docs-site
+npm install
+npm run start
+```
+
+## Testing
+
+Preferred command:
+
+```bash
+./pachybase test
+```
+
+Or directly:
+
+```bash
+docker compose -f docker/docker-compose.yml run --rm php vendor/bin/phpunit --testdox
+```
+
+Release readiness check:
+
+```bash
+./pachybase doctor
+```
+
+## Contributing and roadmap
+
+- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Roadmap: [ROADMAP.md](ROADMAP.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Release notes: [RELEASE_NOTES.md](RELEASE_NOTES.md)
+- Publishing checklist: [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md)
