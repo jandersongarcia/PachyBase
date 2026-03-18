@@ -4,19 +4,6 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use PachyBase\Config;
-use PachyBase\Http\ErrorHandler;
-use PachyBase\Http\Request;
-use PachyBase\Http\Router;
-use PachyBase\Controllers\SystemController;
+use PachyBase\Config\Bootstrap;
 
-Config::load();
-ErrorHandler::register();
-
-$request = Request::capture();
-
-$router = new Router();
-
-$router->get('/', [SystemController::class, 'status']);
-
-$router->dispatch($request);
+Bootstrap::boot(dirname(__DIR__))->handle();

@@ -2,14 +2,37 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
-    'intro',
-    'install',
-    'api-contract',
-    'libraries',
     {
       type: 'category',
-      label: 'Getting Started',
-      items: ['docker-install'],
+      label: 'Overview',
+      items: ['intro', 'architecture', 'install', 'docker-install', 'local-install', 'configuration', 'supported-databases'],
+    },
+    {
+      type: 'category',
+      label: 'API',
+      items: [
+        'api-contract',
+        'auth-security',
+        'automatic-crud',
+        'filters-pagination',
+        'openapi',
+        'ai-endpoints',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Operations',
+      items: ['cli', 'testing'],
+    },
+    {
+      type: 'category',
+      label: 'Internals',
+      items: ['database-layer', 'entity-metadata', 'input-validation', 'contract-enforcement', 'libraries'],
+    },
+    {
+      type: 'category',
+      label: 'Project',
+      items: ['examples', 'release-process', 'contributing', 'roadmap'],
     },
   ],
 };
