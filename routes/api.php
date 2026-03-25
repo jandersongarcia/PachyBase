@@ -7,6 +7,7 @@ use PachyBase\Http\Router;
 use PachyBase\Modules\Auth\AuthModule;
 use PachyBase\Modules\Crud\CrudModule;
 use PachyBase\Modules\OpenApi\OpenApiModule;
+use PachyBase\Modules\Platform\PlatformModule;
 use PachyBase\Modules\System\SystemModule;
 
 return static function (Router $router): void {
@@ -15,4 +16,5 @@ return static function (Router $router): void {
     (new AiModule())->register($router);
     (new AuthModule())->register($router);
     (new CrudModule())->register($router);
+    (new PlatformModule())->register($router);
 };

@@ -2,7 +2,7 @@
 
 PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
 
-Current stage: release candidate `1.0.0-rc.2`
+Current stage: release candidate `1.0.0-rc.3`
 
 ## Quick start (Docker)
 
@@ -60,6 +60,7 @@ Documentation entry points:
 - Generated OpenAPI 3.0.3 document
 - AI-friendly discovery endpoints
 - MCP stdio adapter for agent tooling
+- operator plane for project provisioning, backups, restore, secrets, jobs, storage, and webhooks
 - acceptance smoke check for HTTP and MCP release validation
 - dedicated HTTP smoke checks and a versioned local benchmark baseline
 - PHPUnit regression suite
@@ -73,6 +74,21 @@ Core routes:
 - `GET /ai/schema`
 - `GET /ai/entities`
 - `GET /ai/entity/{name}`
+
+Operator routes:
+
+- `GET /api/platform/projects`
+- `POST /api/platform/projects`
+- `POST /api/platform/projects/{project}/backups`
+- `POST /api/platform/projects/{project}/restore`
+- `PUT /api/platform/projects/{project}/secrets/{key}`
+- `GET /api/platform/operations/overview`
+- `POST /api/platform/jobs`
+- `POST /api/platform/jobs/run`
+- `POST /api/platform/webhooks`
+- `POST /api/platform/webhooks/{id}/test`
+- `POST /api/platform/storage`
+- `GET /api/platform/storage/{id}/download`
 
 Authentication routes:
 
@@ -307,6 +323,13 @@ Database:
 - `db:seed`
 - `db:fresh`
 
+Platform:
+
+- `project:provision`
+- `project:backup`
+- `project:restore`
+- `jobs:work`
+
 Scaffolding:
 
 - `make:module`
@@ -354,7 +377,10 @@ Recommended entry points:
 - [Filters and Pagination](https://jandersongarcia.github.io/pachybase/filters-pagination)
 - [OpenAPI](https://jandersongarcia.github.io/pachybase/openapi)
 - [AI Endpoints](https://jandersongarcia.github.io/pachybase/ai-endpoints)
+- [BaaS Platform](https://jandersongarcia.github.io/pachybase/baas-platform)
 - [CLI](https://jandersongarcia.github.io/pachybase/cli)
+- [Production Deploy](https://jandersongarcia.github.io/pachybase/production-deploy)
+- [Agent Templates](https://jandersongarcia.github.io/pachybase/agent-templates)
 - [Contributing](https://jandersongarcia.github.io/pachybase/contributing)
 - [Roadmap](https://jandersongarcia.github.io/pachybase/roadmap)
 - [Examples](https://jandersongarcia.github.io/pachybase/examples)

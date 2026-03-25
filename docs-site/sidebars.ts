@@ -17,12 +17,13 @@ const sidebars: SidebarsConfig = {
         'filters-pagination',
         'openapi',
         'ai-endpoints',
+        'baas-platform',
       ],
     },
     {
       type: 'category',
       label: 'Operations',
-      items: ['cli', 'testing'],
+      items: ['cli', 'production-deploy', 'agent-templates', 'testing'],
     },
     {
       type: 'category',

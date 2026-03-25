@@ -65,6 +65,10 @@ final class PachybaseCli
                 'db:rollback' => $this->dbRollback($arguments),
                 'db:seed' => $this->dbSeed($arguments),
                 'db:fresh' => $this->dbFresh($arguments),
+                'project:provision' => $this->projectProvision($arguments),
+                'project:backup' => $this->projectBackup($arguments),
+                'project:restore' => $this->projectRestore($arguments),
+                'jobs:work' => $this->jobsWork($arguments),
                 'make:module' => $this->makeModule($arguments),
                 'make:entity' => $this->makeEntity($arguments),
                 'make:migration' => $this->makeMigration($arguments),
@@ -126,6 +130,12 @@ Database:
   db:seed
   db:fresh
 
+Platform:
+  project:provision
+  project:backup
+  project:restore
+  jobs:work
+
 Scaffolding:
   make:module
   make:entity
@@ -155,6 +165,9 @@ Examples:
   php scripts/pachybase.php make:migration create_orders_table
   php scripts/pachybase.php crud:generate --expose-new
   php scripts/pachybase.php auth:token:create "Codex Agent" --scope=crud:read
+  php scripts/pachybase.php project:provision --name="Acme" --slug=acme
+  php scripts/pachybase.php project:backup --project=acme
+  php scripts/pachybase.php jobs:work --project=acme --limit=25
   php scripts/pachybase.php mcp:serve
   php scripts/pachybase.php openapi:build --output=docs-site/static/openapi.json
 
@@ -448,6 +461,38 @@ TEXT);
     private function dbFresh(array $arguments): int
     {
         return $this->runRuntimePhpScript('scripts/db-fresh.php', $arguments);
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function projectProvision(array $arguments): int
+    {
+        return $this->runRuntimePhpScript('scripts/project-provision.php', $arguments);
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function projectBackup(array $arguments): int
+    {
+        return $this->runRuntimePhpScript('scripts/project-backup.php', $arguments);
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function projectRestore(array $arguments): int
+    {
+        return $this->runRuntimePhpScript('scripts/project-restore.php', $arguments);
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function jobsWork(array $arguments): int
+    {
+        return $this->runRuntimePhpScript('scripts/jobs-work.php', $arguments);
     }
 
     /**

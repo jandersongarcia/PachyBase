@@ -2,6 +2,31 @@
 
 All notable changes to PachyBase will be documented in this file.
 
+## [1.0.0-rc.3] - 2026-03-25
+
+### Added
+
+- Minimal BaaS operator plane for project provisioning, project backups and restore, per-project secrets, and an operations overview surface.
+- Tenant-scoped async jobs, webhook registration and delivery tracking, and local file storage primitives.
+- Initial JavaScript SDK plus templates for Codex, Claude, and MCP client integrations.
+- Production, platform, and agent-template documentation for third-party onboarding without manual support.
+
+### Changed
+
+- CLI now exposes `project:provision`, `project:backup`, `project:restore`, and `jobs:work` as first-class platform commands.
+- Runtime route registration now includes the platform module alongside the existing auth, CRUD, OpenAPI, and AI surfaces.
+- Tenant bootstrap is now self-healing for the `default` workspace, including baseline system settings required by auth and CRUD tests.
+
+### Fixed
+
+- Project bootstrap tokens now include the scopes required to manage project secrets from the tenant plane.
+- Backup restore now clears residual async jobs and webhook delivery state before replaying tenant data.
+
+### Verified
+
+- Containerized migration run for the new platform primitives.
+- Full containerized PHPUnit suite: `161 tests`, `703 assertions`.
+
 ## [1.0.0-rc.2] - 2026-03-25
 
 ### Added

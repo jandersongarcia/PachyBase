@@ -1,0 +1,11 @@
+{
+  "pachybase": {
+    "command": "node",
+    "args": ["mcp-client.js"],
+    "env": {
+      "PACHYBASE_BASE_URL": "http://localhost:8080",
+      "PACHYBASE_TOKEN": "<project-token>",
+      "PACHYBASE_TENANT": "<project-slug>"
+    }
+  }
+}
