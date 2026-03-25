@@ -30,7 +30,8 @@ class EntityCrudFilterContractTest extends TestCase
             slug: 'agent-records',
             table: 'agent_records',
             searchableFields: ['title'],
-            filterableFields: ['status', 'priority', 'title', 'published_on', 'last_used_at']
+            filterableFields: ['status', 'priority', 'title', 'published_on', 'last_used_at'],
+            tenantScoped: false
         );
         $entity = new EntityDefinition(
             'AgentRecord',
@@ -82,7 +83,8 @@ class EntityCrudFilterContractTest extends TestCase
         $resource = new CrudEntity(
             slug: 'agent-records',
             table: 'agent_records',
-            filterableFields: ['is_active']
+            filterableFields: ['is_active'],
+            tenantScoped: false
         );
         $entity = new EntityDefinition(
             'AgentRecord',

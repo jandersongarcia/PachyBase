@@ -28,14 +28,15 @@ final class RefreshTokenRepository
      * @param array<int, string> $scopes
      * @return array<string, mixed>
      */
-    public function create(int $userId, string $refreshTokenHash, array $scopes, string $expiresAt): array
+    public function create(int $userId, int $tenantId, string $refreshTokenHash, array $scopes, string $expiresAt): array
     {
         $this->queryExecutor->execute(
             sprintf(
-                'INSERT INTO %s (user_id, refresh_token_hash, scopes, expires_at) VALUES (:user_id, :refresh_token_hash, :scopes, :expires_at)',
+                'INSERT INTO %s (tenant_id, user_id, refresh_token_hash, scopes, expires_at) VALUES (:tenant_id, :user_id, :refresh_token_hash, :scopes, :expires_at)',
                 $this->table
             ),
             [
+                'tenant_id' => $tenantId,
                 'user_id' => $userId,
                 'refresh_token_hash' => $refreshTokenHash,
                 'scopes' => Json::encode(array_values($scopes)),
@@ -87,29 +88,31 @@ final class RefreshTokenRepository
         );
     }
 
-    public function revokeById(int $id): bool
+    public function revokeById(int $id, ?string $reason = null): bool
     {
         $affectedRows = $this->queryExecutor->execute(
-            sprintf('UPDATE %s SET revoked_at = :revoked_at WHERE id = :id AND revoked_at IS NULL', $this->table),
+            sprintf('UPDATE %s SET revoked_at = :revoked_at, revoked_reason = :revoked_reason WHERE id = :id AND revoked_at IS NULL', $this->table),
             [
                 'id' => $id,
                 'revoked_at' => gmdate('Y-m-d H:i:s'),
+                'revoked_reason' => $reason,
             ]
         );
 
         return $affectedRows > 0;
     }
 
-    public function revokeByHash(string $hash): bool
+    public function revokeByHash(string $hash, ?string $reason = null): bool
     {
         $affectedRows = $this->queryExecutor->execute(
             sprintf(
-                'UPDATE %s SET revoked_at = :revoked_at WHERE refresh_token_hash = :refresh_token_hash AND revoked_at IS NULL',
+                'UPDATE %s SET revoked_at = :revoked_at, revoked_reason = :revoked_reason WHERE refresh_token_hash = :refresh_token_hash AND revoked_at IS NULL',
                 $this->table
             ),
             [
                 'refresh_token_hash' => $hash,
                 'revoked_at' => gmdate('Y-m-d H:i:s'),
+                'revoked_reason' => $reason,
             ]
         );
 

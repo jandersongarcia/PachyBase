@@ -31,7 +31,8 @@ final readonly class CrudEntity
         public array $allowedFields = [],
         public int $maxPerPage = 100,
         public array $readOnlyFields = [],
-        public array $hooks = []
+        public array $hooks = [],
+        public bool $tenantScoped = true
     ) {
     }
 
@@ -54,7 +55,8 @@ final readonly class CrudEntity
             allowedFields: self::stringList($config['allowed_fields'] ?? []),
             maxPerPage: max(1, (int) ($config['max_per_page'] ?? 100)),
             readOnlyFields: self::stringList($config['readonly_fields'] ?? []),
-            hooks: is_array($config['hooks'] ?? null) ? $config['hooks'] : []
+            hooks: is_array($config['hooks'] ?? null) ? $config['hooks'] : [],
+            tenantScoped: (bool) ($config['tenant_scoped'] ?? true)
         );
     }
 
@@ -99,6 +101,11 @@ final readonly class CrudEntity
     public function effectiveMaxPerPage(): int
     {
         return max(1, $this->maxPerPage);
+    }
+
+    public function isSystemManagedField(string $fieldName): bool
+    {
+        return $this->tenantScoped && $fieldName === 'tenant_id';
     }
 
     public function hook(string $name): ?callable

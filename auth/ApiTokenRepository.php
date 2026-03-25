@@ -34,19 +34,23 @@ final class ApiTokenRepository
         string $tokenPrefix,
         array $scopes,
         ?int $userId,
+        int $tenantId,
+        ?int $createdByUserId,
         ?string $expiresAt
     ): array {
         $this->queryExecutor->execute(
             sprintf(
-                'INSERT INTO %s (name, token_hash, token_prefix, scopes, user_id, is_active, expires_at) VALUES (:name, :token_hash, :token_prefix, :scopes, :user_id, :is_active, :expires_at)',
+                'INSERT INTO %s (tenant_id, name, token_hash, token_prefix, scopes, user_id, created_by_user_id, is_active, expires_at) VALUES (:tenant_id, :name, :token_hash, :token_prefix, :scopes, :user_id, :created_by_user_id, :is_active, :expires_at)',
                 $this->table
             ),
             [
+                'tenant_id' => $tenantId,
                 'name' => $name,
                 'token_hash' => $tokenHash,
                 'token_prefix' => $tokenPrefix,
                 'scopes' => Json::encode(array_values($scopes)),
                 'user_id' => $userId,
+                'created_by_user_id' => $createdByUserId,
                 'is_active' => true,
                 'expires_at' => $expiresAt,
             ]
@@ -97,11 +101,11 @@ final class ApiTokenRepository
         );
     }
 
-    public function revokeById(int $id): bool
+    public function revokeById(int $id, ?int $revokedByUserId = null, ?string $reason = null): bool
     {
         $affectedRows = $this->queryExecutor->execute(
             sprintf(
-                'UPDATE %s SET is_active = :is_active, revoked_at = :revoked_at WHERE id = :id AND is_active = :currently_active',
+                'UPDATE %s SET is_active = :is_active, revoked_at = :revoked_at, revoked_by_user_id = :revoked_by_user_id, revoked_reason = :revoked_reason WHERE id = :id AND is_active = :currently_active',
                 $this->table
             ),
             [
@@ -109,6 +113,8 @@ final class ApiTokenRepository
                 'is_active' => false,
                 'currently_active' => true,
                 'revoked_at' => gmdate('Y-m-d H:i:s'),
+                'revoked_by_user_id' => $revokedByUserId,
+                'revoked_reason' => $reason,
             ]
         );
 

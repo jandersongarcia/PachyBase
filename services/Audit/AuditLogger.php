@@ -6,12 +6,16 @@ namespace PachyBase\Services\Audit;
 
 use PachyBase\Auth\AuthPrincipal;
 use PachyBase\Config;
+use PachyBase\Database\AdapterFactory;
+use PachyBase\Database\Connection;
+use PachyBase\Database\Query\PdoQueryExecutor;
 use PachyBase\Http\AuthenticationException;
 use PachyBase\Http\AuthorizationException;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;
 use PachyBase\Services\Observability\RequestMetrics;
 use PachyBase\Utils\BooleanParser;
+use PachyBase\Utils\Json;
 use Throwable;
 
 final class AuditLogger
@@ -125,13 +129,6 @@ final class AuditLogger
             return;
         }
 
-        $path = $this->logPath();
-        $directory = dirname($path);
-
-        if (!is_dir($directory) && !mkdir($concurrentDirectory = $directory, 0777, true) && !is_dir($concurrentDirectory)) {
-            return;
-        }
-
         $entry = [
             'timestamp' => gmdate('c'),
             'category' => $category,
@@ -159,7 +156,13 @@ final class AuditLogger
             return;
         }
 
-        file_put_contents($path, $encoded . PHP_EOL, FILE_APPEND | LOCK_EX);
+        if (in_array($this->backend(), ['file', 'both'], true)) {
+            $this->writeFileEntry($encoded);
+        }
+
+        if (in_array($this->backend(), ['database', 'both'], true)) {
+            $this->writeDatabaseEntry($entry);
+        }
     }
 
     private function logPath(): string
@@ -175,6 +178,62 @@ final class AuditLogger
         }
 
         return dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+    }
+
+    private function backend(): string
+    {
+        $backend = strtolower(trim((string) Config::get('APP_AUDIT_LOG_BACKEND', 'database')));
+
+        return in_array($backend, ['database', 'file', 'both'], true) ? $backend : 'database';
+    }
+
+    private function writeFileEntry(string $encoded): void
+    {
+        $path = $this->logPath();
+        $directory = dirname($path);
+
+        if (!is_dir($directory) && !mkdir($concurrentDirectory = $directory, 0777, true) && !is_dir($concurrentDirectory)) {
+            return;
+        }
+
+        file_put_contents($path, $encoded . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private function writeDatabaseEntry(array $entry): void
+    {
+        $connection = Connection::getInstance();
+        $adapter = AdapterFactory::make($connection);
+        $table = $adapter->quoteIdentifier('pb_audit_logs');
+        $principal = is_array($entry['principal'] ?? null) ? $entry['principal'] : null;
+
+        (new PdoQueryExecutor($connection->getPDO()))->execute(
+            sprintf(
+                'INSERT INTO %s (tenant_id, category, event, level, outcome, request_id, method, path, status_code, resource, ip, user_agent, principal_json, metrics_json, context_json, error_json, occurred_at) VALUES (:tenant_id, :category, :event, :level, :outcome, :request_id, :method, :path, :status_code, :resource, :ip, :user_agent, :principal_json, :metrics_json, :context_json, :error_json, :occurred_at)',
+                $table
+            ),
+            [
+                'tenant_id' => isset($principal['tenant_id']) ? (int) $principal['tenant_id'] : ($entry['context']['tenant_id'] ?? null),
+                'category' => $entry['category'] ?? null,
+                'event' => $entry['event'] ?? null,
+                'level' => $entry['level'] ?? null,
+                'outcome' => $entry['outcome'] ?? null,
+                'request_id' => $entry['request_id'] ?? null,
+                'method' => $entry['method'] ?? null,
+                'path' => $entry['path'] ?? null,
+                'status_code' => $entry['status_code'] ?? null,
+                'resource' => $entry['resource'] ?? null,
+                'ip' => $entry['ip'] ?? null,
+                'user_agent' => $entry['user_agent'] ?? null,
+                'principal_json' => Json::encode($entry['principal'] ?? null),
+                'metrics_json' => Json::encode($entry['metrics'] ?? null),
+                'context_json' => Json::encode($entry['context'] ?? null),
+                'error_json' => Json::encode($entry['error'] ?? null),
+                'occurred_at' => gmdate('Y-m-d H:i:s'),
+            ]
+        );
     }
 
     /**

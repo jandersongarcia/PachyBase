@@ -15,7 +15,7 @@ class AuthorizationServiceTest extends TestCase
     public function testAcceptsWildcardScopesForEntityAuthorization(): void
     {
         $request = (new Request('GET', '/api/system-settings'))
-            ->setAttribute('auth.principal', new AuthPrincipal('jwt', 'user', 1, 1, ['entity:system-settings:*']));
+            ->setAttribute('auth.principal', new AuthPrincipal('jwt', 'user', 1, 1, ['entity:system-settings:*'], 1, 'default'));
 
         $principal = (new AuthorizationService())->authorizeEntityAction($request, 'system-settings', 'read');
 
@@ -25,7 +25,7 @@ class AuthorizationServiceTest extends TestCase
     public function testDeniesEntityActionByDefault(): void
     {
         $request = (new Request('DELETE', '/api/system-settings/1'))
-            ->setAttribute('auth.principal', new AuthPrincipal('jwt', 'user', 1, 1, ['crud:read']));
+            ->setAttribute('auth.principal', new AuthPrincipal('jwt', 'user', 1, 1, ['crud:read'], 1, 'default'));
 
         $this->expectException(AuthorizationException::class);
 

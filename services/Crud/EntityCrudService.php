@@ -18,6 +18,7 @@ use PachyBase\Http\Request;
 use PachyBase\Http\ValidationException;
 use PachyBase\Modules\Crud\CrudEntity;
 use PachyBase\Modules\Crud\CrudEntityRegistry;
+use PachyBase\Services\Tenancy\TenantQuotaService;
 use RuntimeException;
 
 final class EntityCrudService
@@ -32,7 +33,8 @@ final class EntityCrudService
         ?DatabaseAdapterInterface $adapter = null,
         ?EntityIntrospector $introspector = null,
         private readonly ?EntityCrudValidator $validator = null,
-        private readonly ?EntityCrudSerializer $serializer = null
+        private readonly ?EntityCrudSerializer $serializer = null,
+        private readonly ?TenantQuotaService $tenantQuotas = null
     ) {
         $connection = Connection::getInstance();
         $this->queryExecutor = $queryExecutor ?? new PdoQueryExecutor($connection->getPDO());
@@ -86,14 +88,14 @@ final class EntityCrudService
     /**
      * @return array<string, mixed>
      */
-    public function show(string $slug, string $id): array
+    public function show(string $slug, string $id, Request $request): array
     {
         [$resource, $entity] = $this->resolveResourceMetadata($slug);
 
         return $this->runItemHook(
             $resource,
             'after_show',
-            $this->serializeResourceItem($resource, $entity, $this->findRowOrFail($resource, $entity, $id)),
+            $this->serializeResourceItem($resource, $entity, $this->findRowOrFail($resource, $entity, $id, $request)),
             $entity
         );
     }
@@ -102,18 +104,25 @@ final class EntityCrudService
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    public function create(string $slug, array $payload): array
+    public function create(string $slug, array $payload, Request $request): array
     {
         [$resource, $entity] = $this->resolveResourceMetadata($slug);
         $payload = $this->runPayloadHook($resource, 'before_create', $payload, $entity);
         $validated = $this->validator()->validateForCreate($resource, $entity, $payload);
+        $validated = $this->applyTenantWriteGuard($resource, $entity, $validated, $request);
+        $tenantId = $this->tenantId($resource, $entity, $request);
+
+        if ($tenantId !== null) {
+            ($this->tenantQuotas ?? new TenantQuotaService($this->queryExecutor, $this->registry ?? new CrudEntityRegistry()))
+                ->assertCanCreateEntity($tenantId);
+        }
 
         try {
             if ($this->adapter->driver() === 'pgsql') {
                 $row = $this->insertReturning($resource, $entity, $validated);
             } else {
                 $this->insert($resource, $validated);
-                $row = $this->findInsertedRow($resource, $entity);
+                $row = $this->findInsertedRow($resource, $entity, $request);
             }
         } catch (QueryException $exception) {
             throw $this->translatePersistenceException($exception);
@@ -131,24 +140,24 @@ final class EntityCrudService
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    public function replace(string $slug, string $id, array $payload): array
+    public function replace(string $slug, string $id, array $payload, Request $request): array
     {
-        return $this->updateRecord($slug, $id, $payload, true);
+        return $this->updateRecord($slug, $id, $payload, true, $request);
     }
 
     /**
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    public function patch(string $slug, string $id, array $payload): array
+    public function patch(string $slug, string $id, array $payload, Request $request): array
     {
-        return $this->updateRecord($slug, $id, $payload, false);
+        return $this->updateRecord($slug, $id, $payload, false, $request);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function delete(string $slug, string $id): array
+    public function delete(string $slug, string $id, Request $request): array
     {
         [$resource, $entity] = $this->resolveResourceMetadata($slug);
 
@@ -156,18 +165,22 @@ final class EntityCrudService
             throw new RuntimeException(sprintf('Delete is disabled for entity "%s".', $resource->slug), 405);
         }
 
-        $row = $this->findRowOrFail($resource, $entity, $id);
+        $row = $this->findRowOrFail($resource, $entity, $id, $request);
         $serialized = $this->serializeResourceItem($resource, $entity, $row);
         $this->runEventHook($resource, 'before_delete', $serialized, $entity);
         $primaryField = $this->primaryField($entity);
 
         $this->queryExecutor->execute(
             sprintf(
-                'DELETE FROM %s WHERE %s = :primary_key',
+                'DELETE FROM %s WHERE %s = :primary_key%s',
                 $this->adapter->quoteIdentifier($resource->table),
-                $this->adapter->quoteIdentifier($primaryField->column)
+                $this->adapter->quoteIdentifier($primaryField->column),
+                $this->tenantWhereClause($resource, $entity, $request)[0]
             ),
-            ['primary_key' => $this->normalizeIdentifierValue($primaryField->type, $id)]
+            array_merge(
+                ['primary_key' => $this->normalizeIdentifierValue($primaryField->type, $id)],
+                $this->tenantWhereClause($resource, $entity, $request)[1]
+            )
         );
 
         return $this->runItemHook(
@@ -264,6 +277,9 @@ final class EntityCrudService
         }
 
         $allowedFilterFields = $resource->filterableFields !== [] ? $resource->filterableFields : array_keys($fieldMap);
+        [$tenantConditions, $tenantBindings] = $this->tenantFilterConditions($resource, $entity, $request);
+        $conditions = array_merge($conditions, $tenantConditions);
+        $bindings = array_merge($bindings, $tenantBindings);
 
         foreach ($filters as $fieldName => $value) {
             if (!in_array($fieldName, $allowedFilterFields, true) || !isset($fieldMap[$fieldName])) {
@@ -554,7 +570,7 @@ final class EntityCrudService
     /**
      * @return array<string, mixed>
      */
-    private function findInsertedRow(CrudEntity $resource, EntityDefinition $entity): array
+    private function findInsertedRow(CrudEntity $resource, EntityDefinition $entity, Request $request): array
     {
         $lastInsertId = Connection::getInstance()->getPDO()->lastInsertId();
 
@@ -562,17 +578,17 @@ final class EntityCrudService
             throw new RuntimeException('The created record could not be reloaded.', 500);
         }
 
-        return $this->findRowOrFail($resource, $entity, (string) $lastInsertId);
+        return $this->findRowOrFail($resource, $entity, (string) $lastInsertId, $request);
     }
 
     /**
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    private function updateRecord(string $slug, string $id, array $payload, bool $replace): array
+    private function updateRecord(string $slug, string $id, array $payload, bool $replace, Request $request): array
     {
         [$resource, $entity] = $this->resolveResourceMetadata($slug);
-        $currentRow = $this->findRowOrFail($resource, $entity, $id);
+        $currentRow = $this->findRowOrFail($resource, $entity, $id, $request);
         $payload = $this->runPayloadHook(
             $resource,
             'before_update',
@@ -584,6 +600,7 @@ final class EntityCrudService
         $validated = $replace
             ? $this->validator()->validateForReplace($resource, $entity, $payload)
             : $this->validator()->validateForPatch($resource, $entity, $payload);
+        $validated = $this->applyTenantWriteGuard($resource, $entity, $validated, $request);
 
         if ($validated === []) {
             throw new ValidationException(details: [[
@@ -595,10 +612,10 @@ final class EntityCrudService
 
         try {
             if ($this->adapter->driver() === 'pgsql') {
-                $row = $this->updateReturning($resource, $entity, $id, $validated);
+                $row = $this->updateReturning($resource, $entity, $id, $validated, $request);
             } else {
-                $this->update($resource, $entity, $id, $validated);
-                $row = $this->findRowOrFail($resource, $entity, $id);
+                $this->update($resource, $entity, $id, $validated, $request);
+                $row = $this->findRowOrFail($resource, $entity, $id, $request);
             }
         } catch (QueryException $exception) {
             throw $this->translatePersistenceException($exception);
@@ -616,11 +633,12 @@ final class EntityCrudService
      * @param array<string, mixed> $values
      * @return array<string, mixed>
      */
-    private function updateReturning(CrudEntity $resource, EntityDefinition $entity, string $id, array $values): array
+    private function updateReturning(CrudEntity $resource, EntityDefinition $entity, string $id, array $values, Request $request): array
     {
         $primaryField = $this->primaryField($entity);
         $bindings = ['primary_key' => $this->normalizeIdentifierValue($primaryField->type, $id)];
         $assignments = [];
+        [$tenantSql, $tenantBindings] = $this->tenantWhereClause($resource, $entity, $request);
 
         foreach ($values as $column => $value) {
             $bindingName = 'update_' . $column;
@@ -630,13 +648,14 @@ final class EntityCrudService
 
         $row = $this->queryExecutor->selectOne(
             sprintf(
-                'UPDATE %s SET %s WHERE %s = :primary_key RETURNING %s',
+                'UPDATE %s SET %s WHERE %s = :primary_key%s RETURNING %s',
                 $this->adapter->quoteIdentifier($resource->table),
                 implode(', ', $assignments),
                 $this->adapter->quoteIdentifier($primaryField->column),
+                $tenantSql,
                 $this->selectColumns($resource, $entity)
             ),
-            $bindings
+            array_merge($bindings, $tenantBindings)
         );
 
         if ($row === null) {
@@ -649,11 +668,12 @@ final class EntityCrudService
     /**
      * @param array<string, mixed> $values
      */
-    private function update(CrudEntity $resource, EntityDefinition $entity, string $id, array $values): void
+    private function update(CrudEntity $resource, EntityDefinition $entity, string $id, array $values, Request $request): void
     {
         $primaryField = $this->primaryField($entity);
         $bindings = ['primary_key' => $this->normalizeIdentifierValue($primaryField->type, $id)];
         $assignments = [];
+        [$tenantSql, $tenantBindings] = $this->tenantWhereClause($resource, $entity, $request);
 
         foreach ($values as $column => $value) {
             $bindingName = 'update_' . $column;
@@ -663,29 +683,35 @@ final class EntityCrudService
 
         $this->queryExecutor->execute(
             sprintf(
-                'UPDATE %s SET %s WHERE %s = :primary_key',
+                'UPDATE %s SET %s WHERE %s = :primary_key%s',
                 $this->adapter->quoteIdentifier($resource->table),
                 implode(', ', $assignments),
-                $this->adapter->quoteIdentifier($primaryField->column)
+                $this->adapter->quoteIdentifier($primaryField->column),
+                $tenantSql
             ),
-            $bindings
+            array_merge($bindings, $tenantBindings)
         );
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function findRowOrFail(CrudEntity $resource, EntityDefinition $entity, string $id): array
+    private function findRowOrFail(CrudEntity $resource, EntityDefinition $entity, string $id, Request $request): array
     {
         $primaryField = $this->primaryField($entity);
+        [$tenantSql, $tenantBindings] = $this->tenantWhereClause($resource, $entity, $request);
         $row = $this->queryExecutor->selectOne(
             sprintf(
-                'SELECT %s FROM %s WHERE %s = :primary_key LIMIT 1',
+                'SELECT %s FROM %s WHERE %s = :primary_key%s LIMIT 1',
                 $this->selectColumns($resource, $entity),
                 $this->adapter->quoteIdentifier($resource->table),
-                $this->adapter->quoteIdentifier($primaryField->column)
+                $this->adapter->quoteIdentifier($primaryField->column),
+                $tenantSql
             ),
-            ['primary_key' => $this->normalizeIdentifierValue($primaryField->type, $id)]
+            array_merge(
+                ['primary_key' => $this->normalizeIdentifierValue($primaryField->type, $id)],
+                $tenantBindings
+            )
         );
 
         if ($row === null) {
@@ -976,6 +1002,7 @@ final class EntityCrudService
                 && !$field->readOnly
                 && !$field->nullable
                 && $field->defaultValue === null
+                && !$resource->isSystemManagedField($field->name)
                 && !$resource->allowsWriteTo($field->name, $field->readOnly)
             ) {
                 throw new RuntimeException(
@@ -1050,5 +1077,70 @@ final class EntityCrudService
         }
 
         $hook($item, $resource, $entity);
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     * @return array<string, mixed>
+     */
+    private function applyTenantWriteGuard(CrudEntity $resource, EntityDefinition $entity, array $values, Request $request): array
+    {
+        $tenantId = $this->tenantId($resource, $entity, $request);
+
+        if ($tenantId !== null) {
+            $values['tenant_id'] = $tenantId;
+        }
+
+        return $values;
+    }
+
+    private function tenantId(CrudEntity $resource, EntityDefinition $entity, Request $request): ?int
+    {
+        if (!$resource->tenantScoped) {
+            return null;
+        }
+
+        if ($entity->field('tenant_id') === null) {
+            throw new RuntimeException(
+                sprintf('Entity "%s" must expose a tenant_id field to support tenant isolation.', $resource->slug),
+                500
+            );
+        }
+
+        $tenantId = $request->attribute('auth.tenant_id');
+
+        if ($tenantId === null) {
+            throw new RuntimeException('The request is missing tenant context for a tenant-scoped resource.', 500);
+        }
+
+        return (int) $tenantId;
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, mixed>}
+     */
+    private function tenantFilterConditions(CrudEntity $resource, EntityDefinition $entity, Request $request): array
+    {
+        $tenantId = $this->tenantId($resource, $entity, $request);
+
+        if ($tenantId === null) {
+            return [[], []];
+        }
+
+        return [[sprintf('%s = :tenant_id', $this->adapter->quoteIdentifier('tenant_id'))], ['tenant_id' => $tenantId]];
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function tenantWhereClause(CrudEntity $resource, EntityDefinition $entity, Request $request): array
+    {
+        $tenantId = $this->tenantId($resource, $entity, $request);
+
+        if ($tenantId === null) {
+            return ['', []];
+        }
+
+        return [sprintf(' AND %s = :tenant_id', $this->adapter->quoteIdentifier('tenant_id')), ['tenant_id' => $tenantId]];
     }
 }

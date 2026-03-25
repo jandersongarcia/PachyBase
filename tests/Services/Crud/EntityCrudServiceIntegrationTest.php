@@ -54,7 +54,8 @@ class EntityCrudServiceIntegrationTest extends TestCase
                     'external_uuid' => ['uuid' => true],
                     'priority' => ['min' => 1, 'max' => 5],
                     'published_on' => ['required_on_replace' => true],
-                ]
+                ],
+                tenantScoped: false
             ),
         ]);
 
@@ -81,15 +82,15 @@ class EntityCrudServiceIntegrationTest extends TestCase
     {
         $paginated = $this->service?->list(
             'phase6-records',
-            new Request('GET', '/api/phase6-records', ['page' => 1, 'per_page' => 2, 'sort' => '-title'])
+            $this->request('GET', ['page' => 1, 'per_page' => 2, 'sort' => '-title'])
         );
         $filtered = $this->service?->list(
             'phase6-records',
-            new Request('GET', '/api/phase6-records', ['filter' => ['status' => 'draft']])
+            $this->request('GET', ['filter' => ['status' => 'draft']])
         );
         $searched = $this->service?->list(
             'phase6-records',
-            new Request('GET', '/api/phase6-records', ['search' => 'alpha'])
+            $this->request('GET', ['search' => 'alpha'])
         );
 
         $this->assertSame(3, $paginated['total']);
@@ -115,9 +116,9 @@ class EntityCrudServiceIntegrationTest extends TestCase
             'external_uuid' => '123e4567-e89b-12d3-a456-426614174000',
             'priority' => 5,
             'published_on' => '2026-03-17',
-        ]);
+        ], $this->request('POST'));
 
-        $shown = $this->service?->show('phase6-records', (string) $created['id']);
+        $shown = $this->service?->show('phase6-records', (string) $created['id'], $this->request('GET'));
         $replaced = $this->service?->replace('phase6-records', (string) $created['id'], [
             'title' => 'Delta Prime',
             'notes' => 'Replaced',
@@ -128,12 +129,12 @@ class EntityCrudServiceIntegrationTest extends TestCase
             'external_uuid' => '123e4567-e89b-12d3-a456-426614174001',
             'priority' => 4,
             'published_on' => '2026-03-18',
-        ]);
+        ], $this->request('PUT'));
         $patched = $this->service?->patch('phase6-records', (string) $created['id'], [
             'notes' => 'Patched notes',
             'priority' => 3,
-        ]);
-        $deleted = $this->service?->delete('phase6-records', (string) $created['id']);
+        ], $this->request('PATCH'));
+        $deleted = $this->service?->delete('phase6-records', (string) $created['id'], $this->request('DELETE'));
 
         $this->assertSame('Delta', $created['title']);
         $this->assertTrue($created['is_active']);
@@ -148,7 +149,7 @@ class EntityCrudServiceIntegrationTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionCode(404);
 
-        $this->service?->show('phase6-records', (string) $created['id']);
+        $this->service?->show('phase6-records', (string) $created['id'], $this->request('GET'));
     }
 
     public function testRejectsInvalidPayloadsForRulesAndOperations(): void
@@ -163,7 +164,7 @@ class EntityCrudServiceIntegrationTest extends TestCase
                 'external_uuid' => 'bad-uuid',
                 'priority' => 9,
                 'published_on' => '17/03/2026',
-            ]);
+            ], $this->request('POST'));
             $this->fail('Expected validation exception.');
         } catch (ValidationException $exception) {
             $codes = array_column($exception->details(), 'code');
@@ -186,7 +187,7 @@ class EntityCrudServiceIntegrationTest extends TestCase
                 'website_url' => 'https://example.com/alpha-prime',
                 'external_uuid' => '123e4567-e89b-12d3-a456-426614174010',
                 'priority' => 2,
-            ]);
+            ], $this->request('PUT'));
             $this->fail('Expected validation exception.');
         } catch (ValidationException $exception) {
             $this->assertSame('published_on', $exception->details()[0]['field']);
@@ -194,7 +195,7 @@ class EntityCrudServiceIntegrationTest extends TestCase
 
         $patched = $this->service?->patch('phase6-records', '1', [
             'priority' => '4',
-        ]);
+        ], $this->request('PATCH'));
 
         $this->assertSame(4, $patched['priority']);
 
@@ -208,7 +209,7 @@ class EntityCrudServiceIntegrationTest extends TestCase
                 'external_uuid' => '123e4567-e89b-12d3-a456-426614174099',
                 'priority' => 3,
                 'published_on' => '2026-03-19',
-            ]);
+            ], $this->request('POST'));
             $this->fail('Expected conflict exception.');
         } catch (RuntimeException $exception) {
             $this->assertSame(409, $exception->getCode());
@@ -287,5 +288,10 @@ class EntityCrudServiceIntegrationTest extends TestCase
                 $row
             );
         }
+    }
+
+    private function request(string $method, array $query = []): Request
+    {
+        return new Request($method, '/api/phase6-records', $query);
     }
 }

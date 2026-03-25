@@ -6,8 +6,10 @@ namespace PachyBase\Api;
 
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\CorsPolicy;
+use PachyBase\Http\DatabaseRateLimiter;
 use PachyBase\Http\FileRateLimiter;
 use PachyBase\Http\Request;
+use PachyBase\Http\RateLimitPolicy;
 use PachyBase\Http\Router;
 use PachyBase\Services\Observability\RequestContext;
 use PachyBase\Services\Observability\RequestMetrics;
@@ -73,6 +75,18 @@ final class HttpKernel
 
     private function enforceRateLimit(Request $request): void
     {
-        (new FileRateLimiter())->enforce($request);
+        $policy = RateLimitPolicy::fromConfig();
+
+        if (!$policy->enabled() || $request->getMethod() === 'OPTIONS') {
+            return;
+        }
+
+        if ($policy->backend() === 'database') {
+            (new DatabaseRateLimiter($policy))->enforce($request);
+
+            return;
+        }
+
+        (new FileRateLimiter($policy))->enforce($request);
     }
 }

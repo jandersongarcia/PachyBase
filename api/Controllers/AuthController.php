@@ -12,21 +12,29 @@ use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;
 use PachyBase\Http\ValidationException;
 use PachyBase\Services\Audit\AuditLogger;
+use PachyBase\Services\Tenancy\TenantQuotaService;
+use PachyBase\Services\Tenancy\TenantRequestResolver;
 
 final class AuthController
 {
     public function __construct(
         private readonly ?AuthService $authService = null,
         private readonly ?AuthorizationService $authorization = null,
-        private readonly ?AuditLogger $auditLogger = null
+        private readonly ?AuditLogger $auditLogger = null,
+        private readonly ?TenantRequestResolver $tenantResolver = null,
+        private readonly ?TenantQuotaService $tenantQuotas = null
     ) {
     }
 
     public function login(Request $request): void
     {
-        $result = $this->service()->login($request->json());
+        $payload = $request->json();
+        $payload['tenant'] ??= $this->tenants()->reference($request, $payload);
+        $tenant = $this->tenants()->resolve($request, $payload);
+        $result = $this->service()->login($payload);
         $this->audit()->logAuth('auth.login.succeeded', $request, [
             'resource' => 'auth.login',
+            'tenant_id' => (int) $tenant['id'],
             'user' => $result['user'] ?? null,
         ], 200);
 
@@ -110,6 +118,13 @@ final class AuthController
             [
                 'authenticated' => true,
                 'principal' => $principal->toArray(),
+                'tenant' => [
+                    'id' => $principal->tenantId,
+                    'slug' => $principal->tenantSlug,
+                ],
+                'quotas' => $principal->tenantId !== null
+                    ? $this->quotaService()->snapshot($principal->tenantId)
+                    : null,
             ],
             ['resource' => 'auth.me']
         );
@@ -126,6 +141,7 @@ final class AuthController
         $result = $this->service()->issueApiToken($principal, $request->json());
         $this->audit()->logAuth('auth.tokens.created', $request, [
             'resource' => 'auth.tokens.store',
+            'tenant_id' => $principal->tenantId,
             'token_id' => $result['token_id'] ?? null,
             'name' => $result['name'] ?? null,
             'expires_at' => $result['expires_at'] ?? null,
@@ -172,5 +188,15 @@ final class AuthController
     private function audit(): AuditLogger
     {
         return $this->auditLogger ?? new AuditLogger();
+    }
+
+    private function tenants(): TenantRequestResolver
+    {
+        return $this->tenantResolver ?? new TenantRequestResolver();
+    }
+
+    private function quotaService(): TenantQuotaService
+    {
+        return $this->tenantQuotas ?? new TenantQuotaService();
     }
 }

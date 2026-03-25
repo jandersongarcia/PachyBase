@@ -16,19 +16,22 @@ class AuthServiceIntegrationTest extends TestCase
     private ?PdoQueryExecutor $executor = null;
     private string $email = '';
     private ?int $userId = null;
+    private ?int $tenantId = null;
 
     protected function setUp(): void
     {
         Config::load(dirname(__DIR__, 2));
         $this->executor = new PdoQueryExecutor(Connection::getInstance()->getPDO());
         $this->email = 'phase7.' . bin2hex(random_bytes(4)) . '@example.com';
+        $this->tenantId = $this->defaultTenantId();
 
         $this->executor->execute(
             sprintf(
-                'INSERT INTO %s (name, email, password_hash, role, scopes, is_active) VALUES (:name, :email, :password_hash, :role, :scopes, :is_active)',
+                'INSERT INTO %s (tenant_id, name, email, password_hash, role, scopes, is_active) VALUES (:tenant_id, :name, :email, :password_hash, :role, :scopes, :is_active)',
                 AdapterFactory::make()->quoteIdentifier('pb_users')
             ),
             [
+                'tenant_id' => $this->tenantId,
                 'name' => 'Phase 7 Test User',
                 'email' => $this->email,
                 'password_hash' => password_hash('phase7-password', PASSWORD_DEFAULT),
@@ -83,11 +86,24 @@ class AuthServiceIntegrationTest extends TestCase
         $revokedRefresh = $service->revokeRefreshToken((string) $refresh['refresh_token']);
 
         $this->assertSame($this->email, $login['user']['email']);
+        $this->assertSame($this->tenantId, $login['user']['tenant']['id']);
         $this->assertSame('jwt', $jwtPrincipal->provider);
         $this->assertSame('api_token', $apiTokenPrincipal->provider);
+        $this->assertSame($this->tenantId, $apiToken['tenant_id']);
         $this->assertSame(['entity:system-settings:read'], $apiToken['scopes']);
         $this->assertArrayHasKey('access_token', $refresh);
         $this->assertTrue($revokedApiToken['revoked']);
         $this->assertTrue($revokedRefresh['revoked']);
+    }
+
+    private function defaultTenantId(): int
+    {
+        return (int) ($this->executor?->scalar(
+            sprintf(
+                'SELECT id AS aggregate FROM %s WHERE slug = :slug LIMIT 1',
+                AdapterFactory::make()->quoteIdentifier('pb_tenants')
+            ),
+            ['slug' => 'default']
+        ) ?? 0);
     }
 }

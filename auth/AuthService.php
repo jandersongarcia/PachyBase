@@ -10,6 +10,8 @@ use PachyBase\Config\AuthConfig;
 use PachyBase\Http\AuthenticationException;
 use PachyBase\Http\AuthorizationException;
 use PachyBase\Http\ValidationException;
+use PachyBase\Services\Tenancy\TenantQuotaService;
+use PachyBase\Services\Tenancy\TenantRepository;
 
 final class AuthService
 {
@@ -18,7 +20,9 @@ final class AuthService
         private readonly ?ApiTokenRepository $apiTokens = null,
         private readonly ?RefreshTokenRepository $refreshTokens = null,
         private readonly ?JwtCodec $jwtCodec = null,
-        private readonly ?AuthorizationService $authorization = null
+        private readonly ?AuthorizationService $authorization = null,
+        private readonly ?TenantRepository $tenants = null,
+        private readonly ?TenantQuotaService $quotas = null
     ) {
     }
 
@@ -30,6 +34,7 @@ final class AuthService
     {
         $email = strtolower(trim((string) ($payload['email'] ?? '')));
         $password = (string) ($payload['password'] ?? '');
+        $tenant = $this->tenantRepository()->resolveReference(isset($payload['tenant']) ? (string) $payload['tenant'] : null);
         $errors = [];
 
         if ($email === '') {
@@ -52,7 +57,7 @@ final class AuthService
             throw new ValidationException(details: $errors);
         }
 
-        $user = $this->userRepository()->findActiveByEmail($email);
+        $user = $this->userRepository()->findActiveByEmail($email, (int) $tenant['id']);
 
         if ($user === null || !password_verify($password, (string) $user['password_hash'])) {
             throw new AuthenticationException('The provided credentials are invalid.', 'INVALID_CREDENTIALS');
@@ -86,7 +91,7 @@ final class AuthService
             throw new AuthenticationException('The refresh token is invalid or expired.', 'INVALID_REFRESH_TOKEN');
         }
 
-        $user = $this->userRepository()->findActiveById((int) $session['user_id']);
+        $user = $this->userRepository()->findActiveById((int) $session['user_id'], (int) $session['tenant_id']);
 
         if ($user === null) {
             throw new AuthenticationException('The authenticated user is no longer available.', 'INVALID_REFRESH_TOKEN');
@@ -133,6 +138,13 @@ final class AuthService
 
         $scopes = $requestedScopes !== [] ? $requestedScopes : $principal->scopes;
         $this->authorization()->ensureGrantable($principal, $scopes);
+        $tenantId = $principal->tenantId;
+
+        if ($tenantId === null) {
+            throw new AuthorizationException('The authenticated principal is missing a tenant binding.', 'TENANT_CONTEXT_MISSING');
+        }
+
+        $this->quotaService()->assertCanIssueApiToken($tenantId);
 
         $plainToken = 'pbt_' . bin2hex(random_bytes(24));
         $record = $this->apiTokenRepository()->create(
@@ -141,11 +153,14 @@ final class AuthService
             substr($plainToken, 0, 12),
             $scopes,
             $principal->userId,
+            $tenantId,
+            $principal->userId,
             $expiresAt
         );
 
         return [
             'token_id' => (int) $record['id'],
+            'tenant_id' => (int) $record['tenant_id'],
             'name' => (string) $record['name'],
             'token' => $plainToken,
             'token_prefix' => (string) $record['token_prefix'],
@@ -160,7 +175,7 @@ final class AuthService
     public function revokeCurrent(AuthPrincipal $principal): array
     {
         if ($principal->provider === 'jwt' && $principal->sessionId !== null) {
-            $this->refreshTokenRepository()->revokeById($principal->sessionId);
+            $this->refreshTokenRepository()->revokeById($principal->sessionId, 'principal_revocation');
 
             return [
                 'revoked' => true,
@@ -170,7 +185,7 @@ final class AuthService
         }
 
         if ($principal->provider === 'api_token' && $principal->tokenId !== null) {
-            $this->apiTokenRepository()->revokeById($principal->tokenId);
+            $this->apiTokenRepository()->revokeById($principal->tokenId, $principal->userId, 'principal_revocation');
 
             return [
                 'revoked' => true,
@@ -187,7 +202,7 @@ final class AuthService
      */
     public function revokeRefreshToken(string $refreshToken): array
     {
-        $revoked = $this->refreshTokenRepository()->revokeByHash(hash('sha256', $refreshToken));
+        $revoked = $this->refreshTokenRepository()->revokeByHash(hash('sha256', $refreshToken), 'refresh_token_revocation');
 
         if (!$revoked) {
             throw new AuthenticationException('The refresh token is invalid or expired.', 'INVALID_REFRESH_TOKEN');
@@ -211,6 +226,17 @@ final class AuthService
         }
 
         if (
+            $principal->tenantId !== null
+            && isset($record['tenant_id'])
+            && (int) $record['tenant_id'] !== $principal->tenantId
+        ) {
+            throw new AuthorizationException(
+                'You do not have permission to revoke credentials from another tenant.',
+                'TENANT_ACCESS_DENIED'
+            );
+        }
+
+        if (
             $principal->userId !== null
             && isset($record['user_id'])
             && $record['user_id'] !== null
@@ -223,7 +249,7 @@ final class AuthService
             );
         }
 
-        $this->apiTokenRepository()->revokeById($tokenId);
+        $this->apiTokenRepository()->revokeById($tokenId, $principal->userId, 'managed_revocation');
 
         return [
             'revoked' => true,
@@ -238,6 +264,12 @@ final class AuthService
     private function issueUserTokens(array $user, array $scopes): array
     {
         $now = time();
+        $tenant = $this->tenantRepository()->findActiveById((int) $user['tenant_id']);
+
+        if ($tenant === null) {
+            throw new AuthenticationException('The authenticated tenant is no longer available.', 'INVALID_TENANT');
+        }
+
         $refreshToken = 'pbr_' . bin2hex(random_bytes(32));
         $refreshExpiresAt = gmdate(
             'Y-m-d H:i:s',
@@ -245,6 +277,7 @@ final class AuthService
         );
         $session = $this->refreshTokenRepository()->create(
             (int) $user['id'],
+            (int) $user['tenant_id'],
             hash('sha256', $refreshToken),
             $scopes,
             $refreshExpiresAt
@@ -258,6 +291,8 @@ final class AuthService
             'typ' => 'access',
             'sub' => (string) $user['id'],
             'uid' => (int) $user['id'],
+            'tid' => (int) $tenant['id'],
+            'tslug' => (string) $tenant['slug'],
             'sid' => (int) $session['id'],
             'provider' => 'jwt',
             'email' => (string) $user['email'],
@@ -272,7 +307,7 @@ final class AuthService
             'refresh_token' => $refreshToken,
             'expires_in' => AuthConfig::accessTokenTtlMinutes() * 60,
             'refresh_expires_in' => AuthConfig::refreshTokenTtlDays() * 86400,
-            'user' => $this->publicUser($user, $scopes),
+            'user' => $this->publicUser($user, $scopes, $tenant),
         ];
     }
 
@@ -284,7 +319,8 @@ final class AuthService
             throw new AuthenticationException('The JWT token payload is invalid.', 'INVALID_TOKEN');
         }
 
-        $user = $this->userRepository()->findActiveById((int) $claims['uid']);
+        $tenantId = isset($claims['tid']) ? (int) $claims['tid'] : null;
+        $user = $this->userRepository()->findActiveById((int) $claims['uid'], $tenantId);
 
         if ($user === null) {
             throw new AuthenticationException('The authenticated user is no longer available.', 'INVALID_TOKEN');
@@ -296,6 +332,8 @@ final class AuthService
             (int) $claims['uid'],
             (int) $claims['uid'],
             $this->normalizeScopes($claims['scopes'] ?? []),
+            $tenantId,
+            isset($claims['tslug']) ? (string) $claims['tslug'] : null,
             isset($claims['sid']) ? (int) $claims['sid'] : null,
             null,
             (string) $user['email'],
@@ -314,7 +352,9 @@ final class AuthService
 
         $this->apiTokenRepository()->touchLastUsed((int) $record['id']);
         $userId = isset($record['user_id']) && $record['user_id'] !== null ? (int) $record['user_id'] : null;
-        $user = $userId !== null ? $this->userRepository()->findActiveById($userId) : null;
+        $tenantId = isset($record['tenant_id']) ? (int) $record['tenant_id'] : null;
+        $tenant = $tenantId !== null ? $this->tenantRepository()->findActiveById($tenantId) : null;
+        $user = $userId !== null ? $this->userRepository()->findActiveById($userId, $tenantId) : null;
 
         return new AuthPrincipal(
             'api_token',
@@ -322,6 +362,8 @@ final class AuthService
             (int) $record['id'],
             $userId,
             $this->decodeScopes($record['scopes'] ?? '[]'),
+            $tenantId,
+            $tenant['slug'] ?? null,
             null,
             (int) $record['id'],
             $user['email'] ?? null,
@@ -402,9 +444,10 @@ final class AuthService
     /**
      * @param array<string, mixed> $user
      * @param array<int, string> $scopes
+     * @param array<string, mixed> $tenant
      * @return array<string, mixed>
      */
-    private function publicUser(array $user, array $scopes): array
+    private function publicUser(array $user, array $scopes, array $tenant): array
     {
         return [
             'id' => (int) $user['id'],
@@ -412,6 +455,11 @@ final class AuthService
             'email' => (string) $user['email'],
             'role' => (string) ($user['role'] ?? 'user'),
             'scopes' => $scopes,
+            'tenant' => [
+                'id' => (int) $tenant['id'],
+                'slug' => (string) $tenant['slug'],
+                'name' => (string) $tenant['name'],
+            ],
         ];
     }
 
@@ -438,5 +486,15 @@ final class AuthService
     private function authorization(): AuthorizationService
     {
         return $this->authorization ?? new AuthorizationService();
+    }
+
+    private function tenantRepository(): TenantRepository
+    {
+        return $this->tenants ?? new TenantRepository();
+    }
+
+    private function quotaService(): TenantQuotaService
+    {
+        return $this->quotas ?? new TenantQuotaService();
     }
 }

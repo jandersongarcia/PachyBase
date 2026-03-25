@@ -23,6 +23,18 @@ final class AuthorizationService
             );
         }
 
+        $requestTenantId = $request->attribute('auth.tenant_id');
+        if (
+            $requestTenantId !== null
+            && $principal->tenantId !== null
+            && (int) $requestTenantId !== $principal->tenantId
+        ) {
+            throw new AuthorizationException(
+                'The authenticated principal cannot access resources from a different tenant.',
+                'TENANT_ACCESS_DENIED'
+            );
+        }
+
         if (!$this->hasAnyScope($principal, $requiredScopes)) {
             throw new AuthorizationException(
                 $message ?? 'You do not have permission to perform this action.',
@@ -35,12 +47,27 @@ final class AuthorizationService
 
     public function authorizeEntityAction(Request $request, string $entity, string $action): AuthPrincipal
     {
+        $tenantId = $request->attribute('auth.tenant_id');
+        $tenantScopes = [];
+
+        if ($tenantId !== null) {
+            $tenantScopes = [
+                sprintf('tenant:%d:*', (int) $tenantId),
+                sprintf('tenant:%d:crud:*', (int) $tenantId),
+                sprintf('tenant:%d:crud:%s', (int) $tenantId, $action),
+                sprintf('tenant:%d:entity:%s:*', (int) $tenantId, $entity),
+                sprintf('tenant:%d:entity:%s:%s', (int) $tenantId, $entity, $action),
+            ];
+        }
+
         return $this->authorize(
             $request,
-            [
+            array_merge([
                 sprintf('crud:%s', $action),
+                'crud:*',
                 sprintf('entity:%s:%s', $entity, $action),
-            ],
+                sprintf('entity:%s:*', $entity),
+            ], $tenantScopes),
             sprintf('You do not have permission to %s the "%s" entity.', $action, $entity)
         );
     }

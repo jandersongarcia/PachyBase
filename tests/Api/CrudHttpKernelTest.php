@@ -23,18 +23,21 @@ class CrudHttpKernelTest extends TestCase
     private string $createdKey = '';
     private string $userEmail = '';
     private ?int $userId = null;
+    private ?int $tenantId = null;
 
     protected function setUp(): void
     {
         Config::load(dirname(__DIR__, 2));
         $this->executor = new PdoQueryExecutor(Connection::getInstance()->getPDO());
         $this->userEmail = 'crud.kernel.' . bin2hex(random_bytes(4)) . '@example.com';
+        $this->tenantId = $this->defaultTenantId();
         $this->executor->execute(
             sprintf(
-                'INSERT INTO %s (name, email, password_hash, role, scopes, is_active) VALUES (:name, :email, :password_hash, :role, :scopes, :is_active)',
+                'INSERT INTO %s (tenant_id, name, email, password_hash, role, scopes, is_active) VALUES (:tenant_id, :name, :email, :password_hash, :role, :scopes, :is_active)',
                 AdapterFactory::make()->quoteIdentifier('pb_users')
             ),
             [
+                'tenant_id' => $this->tenantId,
                 'name' => 'CRUD Kernel Test',
                 'email' => $this->userEmail,
                 'password_hash' => password_hash('phase7-password', PASSWORD_DEFAULT),
@@ -208,5 +211,16 @@ class CrudHttpKernelTest extends TestCase
         ]);
 
         return (string) $login['access_token'];
+    }
+
+    private function defaultTenantId(): int
+    {
+        return (int) ($this->executor?->scalar(
+            sprintf(
+                'SELECT id AS aggregate FROM %s WHERE slug = :slug LIMIT 1',
+                AdapterFactory::make()->quoteIdentifier('pb_tenants')
+            ),
+            ['slug' => 'default']
+        ) ?? 0);
     }
 }

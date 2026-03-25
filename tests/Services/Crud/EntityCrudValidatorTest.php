@@ -109,7 +109,8 @@ class EntityCrudValidatorTest extends TestCase
             slug: 'validator-records',
             table: 'validator_records',
             allowedFields: ['name', 'email'],
-            readOnlyFields: ['email']
+            readOnlyFields: ['email'],
+            tenantScoped: false
         );
 
         try {
@@ -136,6 +137,7 @@ class EntityCrudValidatorTest extends TestCase
         return new CrudEntity(
             'validator-records',
             'validator_records',
+            tenantScoped: false,
             validationRules: [
                 'name' => ['min' => 3, 'max' => 120],
                 'email' => ['email' => true],

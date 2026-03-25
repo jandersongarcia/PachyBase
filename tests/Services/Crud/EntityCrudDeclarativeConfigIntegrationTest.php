@@ -52,6 +52,7 @@ class EntityCrudDeclarativeConfigIntegrationTest extends TestCase
                 validationRules: [
                     'title' => ['min' => 3, 'max' => 120],
                 ],
+                tenantScoped: false,
                 hooks: [
                     'before_create' => static function (array $payload): array {
                         if (isset($payload['title'])) {
@@ -92,7 +93,8 @@ class EntityCrudDeclarativeConfigIntegrationTest extends TestCase
             new CrudEntity(
                 slug: 'phase8-hidden-records',
                 table: (string) $this->tableName,
-                exposed: false
+                exposed: false,
+                tenantScoped: false
             ),
         ]);
 
@@ -120,16 +122,16 @@ class EntityCrudDeclarativeConfigIntegrationTest extends TestCase
         $created = $this->service?->create('phase8-records', [
             'title' => '  Delta  ',
             'secret_note' => 'visible only in storage',
-        ]);
+        ], $this->request('POST'));
 
         $listed = $this->service?->list(
             'phase8-records',
-            new Request('GET', '/api/phase8-records', ['page' => 1, 'per_page' => 2, 'sort' => 'title'])
+            $this->request('GET', ['page' => 1, 'per_page' => 2, 'sort' => 'title'])
         );
-        $shown = $this->service?->show('phase8-records', (string) $created['id']);
+        $shown = $this->service?->show('phase8-records', (string) $created['id'], $this->request('GET'));
         $updated = $this->service?->patch('phase8-records', (string) $created['id'], [
             'title' => '  Delta Prime  ',
-        ]);
+        ], $this->request('PATCH'));
 
         $this->assertSame('Delta', $created['title']);
         $this->assertSame('created', $created['hook_state']);
@@ -146,7 +148,7 @@ class EntityCrudDeclarativeConfigIntegrationTest extends TestCase
         try {
             $this->service?->list(
                 'phase8-records',
-                new Request('GET', '/api/phase8-records', ['page' => 1, 'per_page' => 3])
+                $this->request('GET', ['page' => 1, 'per_page' => 3])
             );
             $this->fail('Expected pagination validation exception.');
         } catch (ValidationException $exception) {
@@ -156,14 +158,14 @@ class EntityCrudDeclarativeConfigIntegrationTest extends TestCase
         try {
             $this->service?->patch('phase8-records', '1', [
                 'status' => 'published',
-            ]);
+            ], $this->request('PATCH'));
             $this->fail('Expected readonly validation exception.');
         } catch (ValidationException $exception) {
             $this->assertSame('readonly_field', $exception->details()[0]['code']);
         }
 
         try {
-            $this->service?->delete('phase8-records', '1');
+            $this->service?->delete('phase8-records', '1', $this->request('DELETE'));
             $this->fail('Expected method not allowed exception.');
         } catch (RuntimeException $exception) {
             $this->assertSame(405, $exception->getCode());
@@ -216,5 +218,10 @@ class EntityCrudDeclarativeConfigIntegrationTest extends TestCase
                 $row
             );
         }
+    }
+
+    private function request(string $method, array $query = []): Request
+    {
+        return new Request($method, '/api/phase8-records', $query);
     }
 }

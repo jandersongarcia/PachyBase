@@ -18,19 +18,22 @@ class AuthHttpKernelTest extends TestCase
     private ?PdoQueryExecutor $executor = null;
     private string $email = '';
     private ?int $userId = null;
+    private ?int $tenantId = null;
 
     protected function setUp(): void
     {
         Config::load(dirname(__DIR__, 2));
         $this->executor = new PdoQueryExecutor(Connection::getInstance()->getPDO());
         $this->email = 'auth.kernel.' . bin2hex(random_bytes(4)) . '@example.com';
+        $this->tenantId = $this->defaultTenantId();
 
         $this->executor->execute(
             sprintf(
-                'INSERT INTO %s (name, email, password_hash, role, scopes, is_active) VALUES (:name, :email, :password_hash, :role, :scopes, :is_active)',
+                'INSERT INTO %s (tenant_id, name, email, password_hash, role, scopes, is_active) VALUES (:tenant_id, :name, :email, :password_hash, :role, :scopes, :is_active)',
                 AdapterFactory::make()->quoteIdentifier('pb_users')
             ),
             [
+                'tenant_id' => $this->tenantId,
                 'name' => 'Auth Kernel Test',
                 'email' => $this->email,
                 'password_hash' => password_hash('phase7-password', PASSWORD_DEFAULT),
@@ -80,6 +83,7 @@ class AuthHttpKernelTest extends TestCase
         $this->assertTrue($loginPayload['success']);
         $this->assertSame('auth.login', $loginPayload['meta']['resource']);
         $this->assertSame($this->email, $loginPayload['data']['user']['email']);
+        $this->assertSame($this->tenantId, $loginPayload['data']['user']['tenant']['id']);
         $this->assertTrue($mePayload['data']['authenticated']);
         $this->assertSame('auth.me', $mePayload['meta']['resource']);
         $this->assertSame('jwt', $mePayload['data']['principal']['provider']);
@@ -135,5 +139,16 @@ class AuthHttpKernelTest extends TestCase
             $_GET = [];
             $_POST = [];
         }
+    }
+
+    private function defaultTenantId(): int
+    {
+        return (int) ($this->executor?->scalar(
+            sprintf(
+                'SELECT id AS aggregate FROM %s WHERE slug = :slug LIMIT 1',
+                AdapterFactory::make()->quoteIdentifier('pb_tenants')
+            ),
+            ['slug' => 'default']
+        ) ?? 0);
     }
 }

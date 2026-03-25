@@ -47,7 +47,7 @@ final class CrudController
     public function show(Request $request, string $entity, string $id): void
     {
         $this->authorize($request, $entity, 'read');
-        $result = ($this->service ?? new EntityCrudService())->show($entity, $id);
+        $result = ($this->service ?? new EntityCrudService())->show($entity, $id, $request);
         $this->audit()->logCrud('crud.show.succeeded', $request, [
             'resource' => 'crud.show',
             'entity' => $entity,
@@ -66,7 +66,7 @@ final class CrudController
     public function store(Request $request, string $entity): void
     {
         $this->authorize($request, $entity, 'create');
-        $result = ($this->service ?? new EntityCrudService())->create($entity, $request->json());
+        $result = ($this->service ?? new EntityCrudService())->create($entity, $request->json(), $request);
         $this->audit()->logCrud('crud.record.created', $request, [
             'resource' => 'crud.store',
             'entity' => $entity,
@@ -86,7 +86,7 @@ final class CrudController
     public function replace(Request $request, string $entity, string $id): void
     {
         $this->authorize($request, $entity, 'update');
-        $result = ($this->service ?? new EntityCrudService())->replace($entity, $id, $request->json());
+        $result = ($this->service ?? new EntityCrudService())->replace($entity, $id, $request->json(), $request);
         $this->audit()->logCrud('crud.record.replaced', $request, [
             'resource' => 'crud.replace',
             'entity' => $entity,
@@ -105,7 +105,7 @@ final class CrudController
     public function update(Request $request, string $entity, string $id): void
     {
         $this->authorize($request, $entity, 'update');
-        $result = ($this->service ?? new EntityCrudService())->patch($entity, $id, $request->json());
+        $result = ($this->service ?? new EntityCrudService())->patch($entity, $id, $request->json(), $request);
         $this->audit()->logCrud('crud.record.updated', $request, [
             'resource' => 'crud.update',
             'entity' => $entity,
@@ -124,7 +124,7 @@ final class CrudController
     public function destroy(Request $request, string $entity, string $id): void
     {
         $this->authorize($request, $entity, 'delete');
-        $result = ($this->service ?? new EntityCrudService())->delete($entity, $id);
+        $result = ($this->service ?? new EntityCrudService())->delete($entity, $id, $request);
         $this->audit()->logCrud('crud.record.deleted', $request, [
             'resource' => 'crud.destroy',
             'entity' => $entity,

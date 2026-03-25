@@ -13,7 +13,8 @@ final readonly class RateLimitPolicy
         private bool $enabled,
         private int $maxRequests,
         private int $windowSeconds,
-        private string $storagePath
+        private string $storagePath,
+        private string $backend = 'file'
     ) {
     }
 
@@ -23,7 +24,8 @@ final readonly class RateLimitPolicy
             BooleanParser::fromMixed(Config::get('APP_RATE_LIMIT_ENABLED', false)),
             max(1, (int) Config::get('APP_RATE_LIMIT_MAX_REQUESTS', 120)),
             max(1, (int) Config::get('APP_RATE_LIMIT_WINDOW_SECONDS', 60)),
-            self::resolveStoragePath((string) Config::get('APP_RATE_LIMIT_STORAGE_PATH', 'build/runtime/rate-limit.json'))
+            self::resolveStoragePath((string) Config::get('APP_RATE_LIMIT_STORAGE_PATH', 'build/runtime/rate-limit.json')),
+            self::resolveBackend((string) Config::get('APP_RATE_LIMIT_BACKEND', 'database'))
         );
     }
 
@@ -47,6 +49,11 @@ final readonly class RateLimitPolicy
         return $this->storagePath;
     }
 
+    public function backend(): string
+    {
+        return $this->backend;
+    }
+
     private static function resolveStoragePath(string $path): string
     {
         $trimmed = trim($path);
@@ -60,5 +67,12 @@ final readonly class RateLimitPolicy
         }
 
         return dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $trimmed);
+    }
+
+    private static function resolveBackend(string $backend): string
+    {
+        $normalized = strtolower(trim($backend));
+
+        return in_array($normalized, ['database', 'file'], true) ? $normalized : 'database';
     }
 }

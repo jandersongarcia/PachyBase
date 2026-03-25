@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PachyBase\Auth\ApiTokenRepository;
 use PachyBase\Auth\UserRepository;
 use PachyBase\Config;
+use PachyBase\Services\Tenancy\TenantRepository;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -133,6 +134,7 @@ function authTokenCreateParseArguments(array $arguments): array
 function authTokenCreateIssueToken(array $options): array
 {
     $user = null;
+    $tenantId = null;
 
     if ($options['user_email'] !== null) {
         $user = (new UserRepository())->findActiveByEmail($options['user_email']);
@@ -140,7 +142,11 @@ function authTokenCreateIssueToken(array $options): array
         if ($user === null) {
             throw new RuntimeException(sprintf('Active user not found for email "%s".', $options['user_email']));
         }
+
+        $tenantId = isset($user['tenant_id']) ? (int) $user['tenant_id'] : null;
     }
+
+    $tenantId ??= (int) (new TenantRepository())->defaultTenant()['id'];
 
     $plainToken = 'pbt_' . bin2hex(random_bytes(24));
     $record = (new ApiTokenRepository())->create(
@@ -148,6 +154,8 @@ function authTokenCreateIssueToken(array $options): array
         hash('sha256', $plainToken),
         substr($plainToken, 0, 12),
         $options['scopes'],
+        isset($user['id']) ? (int) $user['id'] : null,
+        $tenantId,
         isset($user['id']) ? (int) $user['id'] : null,
         $options['expires_at']
     );

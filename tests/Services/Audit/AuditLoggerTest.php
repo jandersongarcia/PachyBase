@@ -36,6 +36,7 @@ class AuditLoggerTest extends TestCase
         $this->logPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pachybase-audit-' . bin2hex(random_bytes(4)) . '.jsonl';
         Config::override([
             'APP_AUDIT_LOG_ENABLED' => 'true',
+            'APP_AUDIT_LOG_BACKEND' => 'file',
             'APP_AUDIT_LOG_PATH' => $this->logPath,
         ]);
         $_SERVER['REMOTE_ADDR'] = '10.0.0.8';
@@ -48,6 +49,8 @@ class AuditLoggerTest extends TestCase
             subjectId: 15,
             userId: 7,
             scopes: ['crud:create'],
+            tenantId: 3,
+            tenantSlug: 'workspace-3',
             tokenId: 15,
             email: 'agent@example.com',
             name: 'Agent',
@@ -87,6 +90,7 @@ class AuditLoggerTest extends TestCase
         $this->logPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pachybase-audit-' . bin2hex(random_bytes(4)) . '.jsonl';
         Config::override([
             'APP_AUDIT_LOG_ENABLED' => 'false',
+            'APP_AUDIT_LOG_BACKEND' => 'file',
             'APP_AUDIT_LOG_PATH' => $this->logPath,
         ]);
 

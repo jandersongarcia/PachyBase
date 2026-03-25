@@ -26,29 +26,39 @@ final class UserRepository
     /**
      * @return array<string, mixed>|null
      */
-    public function findActiveByEmail(string $email): ?array
+    public function findActiveByEmail(string $email, ?int $tenantId = null): ?array
     {
-        return $this->queryExecutor->selectOne(
-            sprintf('SELECT * FROM %s WHERE email = :email AND is_active = :is_active LIMIT 1', $this->table),
-            [
-                'email' => strtolower(trim($email)),
-                'is_active' => true,
-            ]
-        );
+        $bindings = [
+            'email' => strtolower(trim($email)),
+            'is_active' => true,
+        ];
+        $sql = sprintf('SELECT * FROM %s WHERE email = :email AND is_active = :is_active', $this->table);
+
+        if ($tenantId !== null) {
+            $sql .= ' AND tenant_id = :tenant_id';
+            $bindings['tenant_id'] = $tenantId;
+        }
+
+        return $this->queryExecutor->selectOne($sql . ' LIMIT 1', $bindings);
     }
 
     /**
      * @return array<string, mixed>|null
      */
-    public function findActiveById(int $id): ?array
+    public function findActiveById(int $id, ?int $tenantId = null): ?array
     {
-        return $this->queryExecutor->selectOne(
-            sprintf('SELECT * FROM %s WHERE id = :id AND is_active = :is_active LIMIT 1', $this->table),
-            [
-                'id' => $id,
-                'is_active' => true,
-            ]
-        );
+        $bindings = [
+            'id' => $id,
+            'is_active' => true,
+        ];
+        $sql = sprintf('SELECT * FROM %s WHERE id = :id AND is_active = :is_active', $this->table);
+
+        if ($tenantId !== null) {
+            $sql .= ' AND tenant_id = :tenant_id';
+            $bindings['tenant_id'] = $tenantId;
+        }
+
+        return $this->queryExecutor->selectOne($sql . ' LIMIT 1', $bindings);
     }
 
     public function touchLastLogin(int $id): void

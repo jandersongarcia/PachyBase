@@ -90,7 +90,8 @@ final class EntityCrudValidator
         if ($requireRequiredFields) {
             foreach ($entity->fields as $field) {
                 if (
-                    $resource->isReadOnly($field->name, $field->readOnly)
+                    $resource->isSystemManagedField($field->name)
+                    || $resource->isReadOnly($field->name, $field->readOnly)
                     || !$resource->isFieldAllowed($field->name)
                     || !$this->isRequired($resource, $field, $operation)
                 ) {

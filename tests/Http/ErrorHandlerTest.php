@@ -159,6 +159,7 @@ class ErrorHandlerTest extends TestCase
             'APP_ENV' => 'production',
             'APP_DEBUG' => 'false',
             'APP_AUDIT_LOG_ENABLED' => 'true',
+            'APP_AUDIT_LOG_BACKEND' => 'file',
             'APP_AUDIT_LOG_PATH' => $logPath,
         ]);
         ApiResponse::enableCapture();

@@ -19,11 +19,14 @@ return new class extends AbstractSqlSeeder {
     protected function statements(DatabaseAdapterInterface $adapter): array
     {
         $table = $adapter->quoteIdentifier('pb_system_settings');
+        $tenantTable = $adapter->quoteIdentifier('pb_tenants');
+        $tenantSql = sprintf('(SELECT id FROM %s WHERE slug = :tenant_slug LIMIT 1)', $tenantTable);
 
         return [
             [
-                'sql' => "DELETE FROM {$table} WHERE setting_key IN (:key_one, :key_two, :key_three, :key_four)",
+                'sql' => "DELETE FROM {$table} WHERE tenant_id = {$tenantSql} AND setting_key IN (:key_one, :key_two, :key_three, :key_four)",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'key_one' => 'app.name',
                     'key_two' => 'api.contract_version',
                     'key_three' => 'auth.guard',
@@ -31,8 +34,9 @@ return new class extends AbstractSqlSeeder {
                 ],
             ],
             [
-                'sql' => "INSERT INTO {$table} (setting_key, setting_value, value_type, is_public) VALUES (:setting_key, :setting_value, :value_type, :is_public)",
+                'sql' => "INSERT INTO {$table} (tenant_id, setting_key, setting_value, value_type, is_public) VALUES ({$tenantSql}, :setting_key, :setting_value, :value_type, :is_public)",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'setting_key' => 'app.name',
                     'setting_value' => 'PachyBase',
                     'value_type' => 'string',
@@ -40,8 +44,9 @@ return new class extends AbstractSqlSeeder {
                 ],
             ],
             [
-                'sql' => "INSERT INTO {$table} (setting_key, setting_value, value_type, is_public) VALUES (:setting_key, :setting_value, :value_type, :is_public)",
+                'sql' => "INSERT INTO {$table} (tenant_id, setting_key, setting_value, value_type, is_public) VALUES ({$tenantSql}, :setting_key, :setting_value, :value_type, :is_public)",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'setting_key' => 'api.contract_version',
                     'setting_value' => '1.0',
                     'value_type' => 'string',
@@ -49,8 +54,9 @@ return new class extends AbstractSqlSeeder {
                 ],
             ],
             [
-                'sql' => "INSERT INTO {$table} (setting_key, setting_value, value_type, is_public) VALUES (:setting_key, :setting_value, :value_type, :is_public)",
+                'sql' => "INSERT INTO {$table} (tenant_id, setting_key, setting_value, value_type, is_public) VALUES ({$tenantSql}, :setting_key, :setting_value, :value_type, :is_public)",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'setting_key' => 'auth.guard',
                     'setting_value' => 'bearer',
                     'value_type' => 'string',
@@ -58,8 +64,9 @@ return new class extends AbstractSqlSeeder {
                 ],
             ],
             [
-                'sql' => "INSERT INTO {$table} (setting_key, setting_value, value_type, is_public) VALUES (:setting_key, :setting_value, :value_type, :is_public)",
+                'sql' => "INSERT INTO {$table} (tenant_id, setting_key, setting_value, value_type, is_public) VALUES ({$tenantSql}, :setting_key, :setting_value, :value_type, :is_public)",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'setting_key' => 'database.default_driver',
                     'setting_value' => $adapter->driver(),
                     'value_type' => 'string',

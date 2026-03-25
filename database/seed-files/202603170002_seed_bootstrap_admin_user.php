@@ -21,18 +21,22 @@ return new class extends AbstractSqlSeeder {
     protected function statements(DatabaseAdapterInterface $adapter): array
     {
         $table = $adapter->quoteIdentifier('pb_users');
+        $tenantTable = $adapter->quoteIdentifier('pb_tenants');
         $email = AuthConfig::bootstrapAdminEmail();
+        $tenantSql = sprintf('(SELECT id FROM %s WHERE slug = :tenant_slug LIMIT 1)', $tenantTable);
 
         return [
             [
-                'sql' => "DELETE FROM {$table} WHERE email = :email",
+                'sql' => "DELETE FROM {$table} WHERE tenant_id = {$tenantSql} AND email = :email",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'email' => $email,
                 ],
             ],
             [
-                'sql' => "INSERT INTO {$table} (name, email, password_hash, role, scopes, is_active) VALUES (:name, :email, :password_hash, :role, :scopes, :is_active)",
+                'sql' => "INSERT INTO {$table} (tenant_id, name, email, password_hash, role, scopes, is_active) VALUES ({$tenantSql}, :name, :email, :password_hash, :role, :scopes, :is_active)",
                 'bindings' => [
+                    'tenant_slug' => \PachyBase\Config\TenancyConfig::defaultSlug(),
                     'name' => AuthConfig::bootstrapAdminName(),
                     'email' => $email,
                     'password_hash' => password_hash(AuthConfig::bootstrapAdminPassword(), PASSWORD_DEFAULT),
