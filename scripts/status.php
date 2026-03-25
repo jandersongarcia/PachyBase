@@ -9,6 +9,7 @@ use PachyBase\Config\AuthConfig;
 use PachyBase\Database\AdapterFactory;
 use PachyBase\Database\Connection;
 use PachyBase\Database\Query\PdoQueryExecutor;
+use PachyBase\Services\Documentation\BuildDocumentRepository;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -78,6 +79,7 @@ function statusBuildReport(string $basePath, bool $insideDocker = false): array
 
     $appKeyConfigured = trim((string) Config::get('APP_KEY', '')) !== '';
     $jwtSecretAvailable = true;
+    $documents = new BuildDocumentRepository($basePath);
 
     try {
         AuthConfig::jwtSecret();
@@ -96,8 +98,8 @@ function statusBuildReport(string $basePath, bool $insideDocker = false): array
             'providers' => ['jwt', 'api_token'],
         ],
         'docs' => [
-            'openapi' => is_file($basePath . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'openapi.json'),
-            'ai' => is_file($basePath . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'ai-schema.json'),
+            'openapi' => $documents->loadOpenApi() !== null,
+            'ai' => $documents->loadAiSchema() !== null,
         ],
     ];
 }

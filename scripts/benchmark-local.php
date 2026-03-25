@@ -205,6 +205,16 @@ function benchmarkLocalRunScenario(array $scenario, array $options, callable $re
     $path = benchmarkLocalScenarioPath($scenario, $options['entity']);
     $url = $options['base_url'] . $path;
     $expectedStatus = max(100, (int) ($scenario['expect_status'] ?? 200));
+    $warmupRequests = max(0, (int) ($scenario['warmup_requests'] ?? 1));
+
+    for ($warmupIndex = 0; $warmupIndex < $warmupRequests; $warmupIndex++) {
+        try {
+            $request($method, $url, $requiresToken ? $token : null);
+        } catch (Throwable $exception) {
+            $errors[] = 'Warm-up failed: ' . $exception->getMessage();
+            break;
+        }
+    }
 
     for ($index = 0; $index < $iterations; $index++) {
         try {

@@ -6,6 +6,7 @@ namespace PachyBase\Services\Documentation;
 
 use JsonException;
 use PachyBase\Config;
+use PachyBase\Utils\BooleanParser;
 
 final class BuildDocumentRepository
 {
@@ -42,7 +43,7 @@ final class BuildDocumentRepository
      */
     private function loadDocument(string $filename, callable $validator): ?array
     {
-        if (!Config::isProduction()) {
+        if (!$this->shouldLoadBuildDocuments()) {
             return null;
         }
 
@@ -69,6 +70,11 @@ final class BuildDocumentRepository
         }
 
         return $document;
+    }
+
+    private function shouldLoadBuildDocuments(): bool
+    {
+        return BooleanParser::fromMixed(Config::get('APP_PREFER_BUILD_DOCS', true));
     }
 
     private function buildPath(string $filename): string

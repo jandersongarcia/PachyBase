@@ -43,7 +43,7 @@ class BuildDocumentRepositoryTest extends TestCase
         @rmdir($this->basePath);
     }
 
-    public function testLoadsStaticOpenApiDocumentOnlyInProduction(): void
+    public function testLoadsStaticOpenApiDocumentByDefaultWhenPresent(): void
     {
         file_put_contents(
             $this->basePath . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'openapi.json',
@@ -53,11 +53,24 @@ class BuildDocumentRepositoryTest extends TestCase
         Config::override(['APP_ENV' => 'development']);
         $repository = new BuildDocumentRepository($this->basePath);
 
-        $this->assertNull($repository->loadOpenApi());
-
-        Config::override(['APP_ENV' => 'production']);
-
         $this->assertSame('3.0.3', $repository->loadOpenApi()['openapi'] ?? null);
+    }
+
+    public function testSkipsStaticOpenApiDocumentWhenPreferenceIsDisabled(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'openapi.json',
+            json_encode(['openapi' => '3.0.3', 'paths' => ['/health' => ['get' => []]]], JSON_PRETTY_PRINT)
+        );
+
+        Config::override([
+            'APP_ENV' => 'development',
+            'APP_PREFER_BUILD_DOCS' => 'false',
+        ]);
+
+        $repository = new BuildDocumentRepository($this->basePath);
+
+        $this->assertNull($repository->loadOpenApi());
     }
 
     public function testIgnoresInvalidStaticAiSchemaDocument(): void

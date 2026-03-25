@@ -125,4 +125,49 @@ class BenchmarkLocalTest extends TestCase
         $this->assertSame('pass', $report['status']);
         $this->assertSame('warning', $report['scenarios'][0]['status']);
     }
+
+    public function testBuildReportIgnoresWarmupRequestFromMeasuredLatency(): void
+    {
+        $baseline = [
+            'version' => '1.0',
+            'name' => 'test-baseline',
+            'scenarios' => [
+                [
+                    'name' => 'root_status',
+                    'method' => 'GET',
+                    'path' => '/',
+                    'iterations' => 2,
+                    'warmup_requests' => 1,
+                    'expect_status' => 200,
+                    'max_average_ms' => 50,
+                    'max_p95_ms' => 50,
+                ],
+            ],
+        ];
+
+        $durations = [500.0, 10.0, 20.0];
+        $report = benchmarkLocalBuildReport(
+            [
+                'base_url' => 'http://localhost:8080',
+                'token' => '',
+                'entity' => 'system-settings',
+                'baseline' => 'unused.json',
+            ],
+            $baseline,
+            function (string $method, string $url, ?string $token = null) use (&$durations): array {
+                return [
+                    'status_code' => 200,
+                    'duration_ms' => array_shift($durations),
+                    'headers' => [],
+                    'payload' => ['success' => true],
+                ];
+            }
+        );
+
+        $scenario = $report['scenarios'][0];
+
+        $this->assertSame('pass', $scenario['status']);
+        $this->assertSame(15.0, $scenario['average_ms']);
+        $this->assertSame(20.0, $scenario['p95_ms']);
+    }
 }
