@@ -41,6 +41,22 @@ Use equality filters with `filter[field]=value`:
 /api/system-settings?filter[is_public]=1
 ```
 
+For richer comparisons, use `filter[field][operator]=value`:
+
+- `eq`, `ne`
+- `gt`, `gte`, `lt`, `lte` for numeric and date/time fields
+- `in` for comma-separated values
+- `contains` for case-insensitive partial matches on text fields
+- `null` with `true` or `false`
+
+Examples:
+
+```text
+/api/system-settings?filter[setting_key][contains]=site
+/api/system-settings?filter[id][gte]=10
+/api/system-settings?filter[value_type][in]=string,json
+```
+
 Allowed filter fields come from the entity configuration and can be inspected through both OpenAPI and `/ai/entity/{name}`.
 
 ## Sorting
@@ -68,6 +84,8 @@ Searchable fields are controlled by `config/CrudEntities.php`.
 ```bash
 curl "http://localhost:8080/api/system-settings?page=2&per_page=10"
 curl "http://localhost:8080/api/system-settings?filter[is_public]=1&sort=setting_key"
+curl "http://localhost:8080/api/system-settings?filter[setting_key][contains]=site"
+curl "http://localhost:8080/api/system-settings?filter[value_type][in]=string,json"
 curl "http://localhost:8080/api/system-settings?search=app"
 ```
 

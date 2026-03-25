@@ -51,6 +51,26 @@ class Router
         return $this->routes;
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function allowedMethodsForPath(string $path): array
+    {
+        $methods = [];
+
+        foreach ($this->routes as $route) {
+            if (!preg_match($route->pattern, $path)) {
+                continue;
+            }
+
+            if (!in_array($route->method, $methods, true)) {
+                $methods[] = $route->method;
+            }
+        }
+
+        return $methods;
+    }
+
     public function dispatch(Request $request): void
     {
         $method = $request->getMethod();

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PachyBase\Http;
 
 use PachyBase\Config;
+use PachyBase\Services\Audit\AuditLogger;
+use PachyBase\Services\Observability\RequestContext;
 use Throwable;
 
 final class ErrorHandler
@@ -42,6 +44,9 @@ final class ErrorHandler
                 return;
             }
 
+            $exception = new \ErrorException($error['message'], 0, $error['type'], $error['file'], $error['line']);
+            self::logger()->logException($exception, self::currentRequest(), 500);
+
             ApiResponse::error(
                 'FATAL_ERROR',
                 self::errorMessage('A fatal error interrupted the request.'),
@@ -59,6 +64,10 @@ final class ErrorHandler
 
     public static function renderException(Throwable $exception): never
     {
+        $code = $exception->getCode();
+        $statusCode = (is_int($code) && $code >= 100 && $code <= 599) ? $code : 500;
+        self::logger()->logException($exception, self::currentRequest(), $statusCode);
+
         if ($exception instanceof ValidationException) {
             ApiResponse::validationError(
                 $exception->details(),
@@ -80,9 +89,6 @@ final class ErrorHandler
                 $exception->errorCode()
             );
         }
-
-        $code = $exception->getCode();
-        $statusCode = (is_int($code) && $code >= 100 && $code <= 599) ? $code : 500;
 
         $errorCode = match ($statusCode) {
             400 => 'BAD_REQUEST',
@@ -171,5 +177,26 @@ final class ErrorHandler
     private static function debugEnabled(): bool
     {
         return Config::debugEnabled();
+    }
+
+    private static function currentRequest(): Request
+    {
+        $request = RequestContext::current();
+
+        if ($request instanceof Request) {
+            return $request;
+        }
+
+        $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+
+        return new Request(
+            (string) ($_SERVER['REQUEST_METHOD'] ?? 'CLI'),
+            is_string($path) && $path !== '' ? $path : '/'
+        );
+    }
+
+    private static function logger(): AuditLogger
+    {
+        return new AuditLogger();
     }
 }

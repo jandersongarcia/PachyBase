@@ -7,6 +7,7 @@ namespace PachyBase\Database\Metadata;
 use PachyBase\Database\Schema\ColumnDefinition;
 use PachyBase\Database\Schema\SchemaInspector;
 use PachyBase\Database\Schema\TableSchema;
+use PachyBase\Services\Observability\RequestMetrics;
 
 final class EntityIntrospector
 {
@@ -16,7 +17,7 @@ final class EntityIntrospector
         private readonly ?SchemaInspector $schemaInspector = null,
         ?MetadataCacheInterface $cache = null
     ) {
-        $this->cache = $cache ?? new InMemoryMetadataCache();
+        $this->cache = $cache ?? new FileMetadataCache();
     }
 
     public function inspectTable(string $table): EntityDefinition
@@ -27,7 +28,11 @@ final class EntityIntrospector
             return $cached;
         }
 
-        $entity = $this->buildDefinition($this->schemaInspector()->inspectTable($table));
+        $startedAt = hrtime(true);
+        $tableSchema = $this->schemaInspector()->inspectTable($table);
+        RequestMetrics::recordIntrospection((hrtime(true) - $startedAt) / 1_000_000);
+
+        $entity = $this->buildDefinition($tableSchema);
         $this->cache->put($entity);
 
         return $entity;
@@ -39,9 +44,21 @@ final class EntityIntrospector
     public function inspectDatabase(): array
     {
         $entities = [];
+        $startedAt = hrtime(true);
+        $databaseSchema = $this->schemaInspector()->inspectDatabase();
+        RequestMetrics::recordIntrospection((hrtime(true) - $startedAt) / 1_000_000);
 
-        foreach ($this->schemaInspector()->inspectDatabase()->tables as $tableSchema) {
-            $entities[] = $this->inspectTable($tableSchema->table->name);
+        foreach ($databaseSchema->tables as $tableSchema) {
+            $cached = $this->cache->get($tableSchema->table->name);
+
+            if ($cached instanceof EntityDefinition) {
+                $entities[] = $cached;
+                continue;
+            }
+
+            $entity = $this->buildDefinition($tableSchema);
+            $this->cache->put($entity);
+            $entities[] = $entity;
         }
 
         return $entities;

@@ -53,8 +53,19 @@ function Ensure-EnvFile {
 }
 
 function Ensure-Compose {
+    Ensure-ComposeSynced
+
     if (-not (Test-Path $composePath)) {
         Fail 'docker/docker-compose.yml was not found. Run ".\pachybase.bat docker:sync" first.'
+    }
+}
+
+function Ensure-ComposeSynced {
+    Ensure-EnvFile
+
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $setupScript -Mode "compose-sync" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
     }
 }
 

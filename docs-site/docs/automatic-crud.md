@@ -54,16 +54,31 @@ Each entity config can now:
 
 ### Filtering
 
-Simple equality filters use:
+Equality filters use:
 
 ```text
 filter[field]=value
 ```
 
+Richer filters use:
+
+```text
+filter[field][operator]=value
+```
+
+Supported operators:
+
+- `eq`, `ne`
+- `gt`, `gte`, `lt`, `lte` for numeric and date/time fields
+- `in` for comma-separated values
+- `contains` for case-insensitive text matches
+- `null` with `true` or `false`
+
 Example:
 
 ```text
 /api/system-settings?filter[is_public]=1
+/api/system-settings?filter[setting_key][contains]=site
 ```
 
 ### Sorting

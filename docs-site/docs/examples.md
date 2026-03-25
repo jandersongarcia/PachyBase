@@ -43,6 +43,13 @@ curl "http://localhost:8080/api/system-settings?filter[is_public]=1" \
   -H "Authorization: Bearer <access-token>"
 ```
 
+Use explicit operators when needed:
+
+```bash
+curl "http://localhost:8080/api/system-settings?filter[setting_key][contains]=site&filter[value_type][in]=string,json" \
+  -H "Authorization: Bearer <access-token>"
+```
+
 ## 5. Create a CRUD record
 
 ```bash
@@ -58,4 +65,19 @@ curl -X POST http://localhost:8080/api/system-settings \
 ./pachybase openapi:build --output=build/openapi.json
 curl http://localhost:8080/ai/schema
 curl http://localhost:8080/ai/entity/system-settings
+```
+
+## 7. Create an integration token for an agent
+
+```bash
+./pachybase auth:token:create "Codex Agent" \
+  --scope=crud:read \
+  --scope=entity:system-settings:read
+```
+
+Use the returned `token` value directly:
+
+```bash
+curl http://localhost:8080/api/system-settings \
+  -H "Authorization: Bearer <integration-token>"
 ```

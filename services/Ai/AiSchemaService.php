@@ -152,7 +152,25 @@ final class AiSchemaService
                     'style' => 'deepObject',
                     'enabled' => $this->filterableFields($resource, $entity) !== [],
                     'fields' => $this->filterableFields($resource, $entity),
-                    'syntax' => 'Use filter[field]=value with one scalar value per field.',
+                    'syntax' => 'Use filter[field]=value for equality, or filter[field][operator]=value for explicit operators.',
+                    'operators' => [
+                        'eq' => 'Equals. This is also the implicit behavior of filter[field]=value.',
+                        'ne' => 'Not equals.',
+                        'gt' => 'Greater than. Supported on numeric and date/time fields.',
+                        'gte' => 'Greater than or equal to. Supported on numeric and date/time fields.',
+                        'lt' => 'Less than. Supported on numeric and date/time fields.',
+                        'lte' => 'Less than or equal to. Supported on numeric and date/time fields.',
+                        'in' => 'Matches any value from a comma-separated list or repeated list input.',
+                        'contains' => 'Case-insensitive partial match for string/text fields.',
+                        'null' => 'Use true for IS NULL or false for IS NOT NULL.',
+                    ],
+                    'examples' => [
+                        'filter[setting_key]=site_name',
+                        'filter[priority][gte]=3',
+                        'filter[title][contains]=alpha',
+                        'filter[status][in]=draft,published',
+                        'filter[last_used_at][null]=true',
+                    ],
                 ],
             ],
             'operations' => $this->operations($resource),
@@ -268,6 +286,9 @@ final class AiSchemaService
             'nullable' => $field->nullable,
             'visible' => true,
             'filterable' => in_array($field->name, $this->filterableFields($resource, $entity), true),
+            'filter_operators' => in_array($field->name, $this->filterableFields($resource, $entity), true)
+                ? $this->filterOperators($field)
+                : [],
             'sortable' => in_array($field->name, $this->sortableFields($resource, $entity), true),
             'searchable' => in_array($field->name, $this->searchableFields($resource, $entity), true),
             'default' => $field->defaultValue,
@@ -472,5 +493,23 @@ final class AiSchemaService
             'uuid' => 'uuid',
             default => null,
         };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function filterOperators(FieldDefinition $field): array
+    {
+        $operators = ['eq', 'ne', 'in', 'null'];
+
+        if (in_array($field->type, ['integer', 'bigint', 'decimal', 'float', 'date', 'datetime', 'time'], true)) {
+            $operators = array_merge($operators, ['gt', 'gte', 'lt', 'lte']);
+        }
+
+        if (in_array($field->type, ['string', 'text'], true)) {
+            $operators[] = 'contains';
+        }
+
+        return $operators;
     }
 }

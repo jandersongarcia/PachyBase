@@ -11,6 +11,8 @@ use PachyBase\Http\AuthorizationException;
 use PachyBase\Http\ErrorHandler;
 use PachyBase\Http\ResponseCaptured;
 use PachyBase\Http\ValidationException;
+use PachyBase\Services\Observability\RequestContext;
+use PachyBase\Services\Observability\RequestMetrics;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -20,6 +22,8 @@ class ErrorHandlerTest extends TestCase
     {
         ApiResponse::disableCapture();
         Config::reset();
+        RequestContext::clear();
+        RequestMetrics::reset();
         $_SERVER = [];
     }
 
@@ -145,6 +149,48 @@ class ErrorHandlerTest extends TestCase
             $this->assertSame('INSUFFICIENT_PERMISSIONS', $payload['error']['code']);
             $this->assertSame('authorization_error', $payload['error']['type']);
             $this->assertSame('You do not have permission to delete users.', $payload['error']['message']);
+        }
+    }
+
+    public function testRenderExceptionWritesStructuredErrorLogWhenEnabled(): void
+    {
+        $logPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pachybase-error-' . bin2hex(random_bytes(4)) . '.jsonl';
+        Config::override([
+            'APP_ENV' => 'production',
+            'APP_DEBUG' => 'false',
+            'APP_AUDIT_LOG_ENABLED' => 'true',
+            'APP_AUDIT_LOG_PATH' => $logPath,
+        ]);
+        ApiResponse::enableCapture();
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/api/system-settings';
+        $_SERVER['HTTP_X_REQUEST_ID'] = 'req-error-1';
+        RequestMetrics::start();
+        RequestMetrics::recordQuery(4.40);
+
+        try {
+            ErrorHandler::renderException(new RuntimeException('Database write failed', 500));
+            $this->fail('Expected captured response.');
+        } catch (ResponseCaptured) {
+            $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+            $this->assertIsArray($lines);
+            $this->assertCount(1, $lines);
+
+            $entry = json_decode((string) $lines[0], true);
+
+            $this->assertSame('crud', $entry['category']);
+            $this->assertSame('crud.request.failed', $entry['event']);
+            $this->assertSame('error', $entry['level']);
+            $this->assertSame('failure', $entry['outcome']);
+            $this->assertSame('req-error-1', $entry['request_id']);
+            $this->assertSame(500, $entry['status_code']);
+            $this->assertSame('Database write failed', $entry['error']['message']);
+            $this->assertSame(4.4, $entry['metrics']['query_time_ms']);
+        } finally {
+            if (is_file($logPath)) {
+                unlink($logPath);
+            }
         }
     }
 }

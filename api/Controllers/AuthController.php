@@ -11,27 +11,41 @@ use PachyBase\Auth\BearerTokenAuthenticator;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\Request;
 use PachyBase\Http\ValidationException;
+use PachyBase\Services\Audit\AuditLogger;
 
 final class AuthController
 {
     public function __construct(
         private readonly ?AuthService $authService = null,
-        private readonly ?AuthorizationService $authorization = null
+        private readonly ?AuthorizationService $authorization = null,
+        private readonly ?AuditLogger $auditLogger = null
     ) {
     }
 
     public function login(Request $request): void
     {
+        $result = $this->service()->login($request->json());
+        $this->audit()->logAuth('auth.login.succeeded', $request, [
+            'resource' => 'auth.login',
+            'user' => $result['user'] ?? null,
+        ], 200);
+
         ApiResponse::success(
-            $this->service()->login($request->json()),
+            $result,
             ['resource' => 'auth.login']
         );
     }
 
     public function refresh(Request $request): void
     {
+        $result = $this->service()->refresh($request->json());
+        $this->audit()->logAuth('auth.refresh.succeeded', $request, [
+            'resource' => 'auth.refresh',
+            'user' => $result['user'] ?? null,
+        ], 200);
+
         ApiResponse::success(
-            $this->service()->refresh($request->json()),
+            $result,
             ['resource' => 'auth.refresh']
         );
     }
@@ -41,8 +55,14 @@ final class AuthController
         $refreshToken = trim((string) $request->json('refresh_token', ''));
 
         if ($refreshToken !== '') {
+            $result = $this->service()->revokeRefreshToken($refreshToken);
+            $this->audit()->logAuth('auth.revoke.refresh_token', $request, [
+                'resource' => 'auth.revoke',
+                'result' => $result,
+            ], 200);
+
             ApiResponse::success(
-                $this->service()->revokeRefreshToken($refreshToken),
+                $result,
                 ['resource' => 'auth.revoke']
             );
         }
@@ -65,8 +85,14 @@ final class AuthController
             ]]);
         }
 
+        $result = $this->service()->revokeCurrent($principal);
+        $this->audit()->logAuth('auth.revoke.current', $request, [
+            'resource' => 'auth.revoke',
+            'result' => $result,
+        ], 200);
+
         ApiResponse::success(
-            $this->service()->revokeCurrent($principal),
+            $result,
             ['resource' => 'auth.revoke']
         );
     }
@@ -75,6 +101,10 @@ final class AuthController
     {
         /** @var AuthPrincipal $principal */
         $principal = $request->attribute('auth.principal');
+        $this->audit()->logAuth('auth.me.succeeded', $request, [
+            'resource' => 'auth.me',
+            'principal' => $principal->toArray(),
+        ], 200);
 
         ApiResponse::success(
             [
@@ -93,8 +123,16 @@ final class AuthController
             'You do not have permission to create API tokens.'
         );
 
+        $result = $this->service()->issueApiToken($principal, $request->json());
+        $this->audit()->logAuth('auth.tokens.created', $request, [
+            'resource' => 'auth.tokens.store',
+            'token_id' => $result['token_id'] ?? null,
+            'name' => $result['name'] ?? null,
+            'expires_at' => $result['expires_at'] ?? null,
+        ], 201);
+
         ApiResponse::success(
-            $this->service()->issueApiToken($principal, $request->json()),
+            $result,
             ['resource' => 'auth.tokens.store'],
             201
         );
@@ -108,8 +146,15 @@ final class AuthController
             'You do not have permission to revoke API tokens.'
         );
 
+        $result = $this->service()->revokeApiToken($principal, (int) $id);
+        $this->audit()->logAuth('auth.tokens.revoked', $request, [
+            'resource' => 'auth.tokens.destroy',
+            'token_id' => (int) $id,
+            'result' => $result,
+        ], 200);
+
         ApiResponse::success(
-            $this->service()->revokeApiToken($principal, (int) $id),
+            $result,
             ['resource' => 'auth.tokens.destroy']
         );
     }
@@ -122,5 +167,10 @@ final class AuthController
     private function authorization(): AuthorizationService
     {
         return $this->authorization ?? new AuthorizationService();
+    }
+
+    private function audit(): AuditLogger
+    {
+        return $this->auditLogger ?? new AuditLogger();
     }
 }

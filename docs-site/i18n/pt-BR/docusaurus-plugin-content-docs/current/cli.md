@@ -31,6 +31,7 @@ Ciclo de vida:
 - `start`: inicia os servicos Docker ou o runtime local de PHP com base em `APP_RUNTIME`
 - `stop`: encerra o runtime ativo
 - `doctor`: valida postura do runtime, consistencia do `.env`, alinhamento com Docker e configuracoes sensiveis de release
+- `acceptance:check`: executa smoke checks contra um runtime vivo do PachyBase, incluindo descoberta HTTP e validacao do adaptador MCP
 - `status`: retorna uma visao rapida de runtime, banco, auth e docs geradas
 - `test`: executa a suite PHPUnit no Docker ou localmente, conforme o runtime configurado
 
@@ -70,6 +71,8 @@ Scaffolding:
 Build e inspecao:
 
 - `auth:install`: configura os segredos padrao de autenticacao e, opcionalmente, prepara a persistencia de auth
+- `auth:token:create`: cria um API token com escopos explicitos e vinculo opcional a usuario
+- `mcp:serve`: inicia o adaptador MCP via stdio apontando para a API HTTP viva do PachyBase
 - `entity:list`: inspeciona a metadata normalizada das entidades
 - `crud:sync`: regenera `config/CrudEntities.php` a partir do schema ativo
 - `openapi:build`: grava um documento OpenAPI estatico, por padrao em `build/openapi.json`
@@ -81,6 +84,7 @@ Build e inspecao:
 ```bash
 ./pachybase install
 ./pachybase status
+./pachybase acceptance:check
 ./pachybase entity:list
 ./pachybase crud:generate --expose-new
 ./pachybase openapi:build
@@ -108,6 +112,7 @@ vendor/bin/phpunit --testdox
 
 - `env:sync --force`: sobrescreve o `.env` atual
 - `env:validate --json`: imprime o relatorio de validacao em JSON
+- `acceptance:check --json`: imprime o relatorio de smoke check em JSON
 - `app:key --force`: rotaciona intencionalmente a chave da aplicacao
 - `crud:sync --expose-new`: marca entidades novas introspectadas como expostas
 - `crud:sync --output=path/to/CrudEntities.php`: grava a configuracao CRUD em outro caminho
@@ -115,3 +120,5 @@ vendor/bin/phpunit --testdox
 - `make:test Example --type=functional`: cria um esqueleto de teste funcional
 - `openapi:build --output=docs-site/static/openapi.json`: publica a especificacao gerada em um caminho customizado
 - `ai:build --output=build/ai-schema.json`: publica o schema de IA em um caminho customizado
+- `auth:token:create "Codex Agent" --scope=crud:read --scope=entity:system-settings:read`: cria um token de integracao escopado
+- `mcp:serve --base-url=http://localhost:8080`: aponta o adaptador MCP para um runtime especifico do PachyBase

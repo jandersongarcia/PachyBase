@@ -274,21 +274,14 @@ final class EntityCrudService
                 ]]);
             }
 
-            if (is_array($value)) {
-                throw new ValidationException(details: [[
-                    'field' => (string) $fieldName,
-                    'code' => 'invalid_filter_value',
-                    'message' => 'Simple filters only accept a single scalar value.',
-                ]]);
-            }
-
-            $bindingName = 'filter_' . $fieldName;
-            $conditions[] = sprintf(
-                '%s = :%s',
-                $this->adapter->quoteIdentifier($fieldMap[$fieldName]->column),
-                $bindingName
+            [$fieldConditions, $fieldBindings] = $this->buildFieldFilterConditions(
+                (string) $fieldName,
+                $fieldMap[$fieldName],
+                $value
             );
-            $bindings[$bindingName] = $this->normalizeFilterValue($fieldMap[$fieldName]->type, $value);
+
+            $conditions = array_merge($conditions, $fieldConditions);
+            $bindings = array_merge($bindings, $fieldBindings);
         }
 
         $search = trim((string) $request->query('search', ''));
@@ -317,6 +310,139 @@ final class EntityCrudService
         }
 
         return [' WHERE ' . implode(' AND ', $conditions), $bindings];
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, mixed>}
+     */
+    private function buildFieldFilterConditions(string $fieldName, FieldDefinition $field, mixed $value): array
+    {
+        if (!is_array($value)) {
+            return $this->buildFilterCondition($fieldName, $field, 'eq', $value);
+        }
+
+        if ($value === []) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'Structured filters must define at least one operator.',
+            ]]);
+        }
+
+        if (array_is_list($value)) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'Structured filters must use named operators like eq, ne, gt, gte, lt, lte, in, contains, or null.',
+            ]]);
+        }
+
+        $conditions = [];
+        $bindings = [];
+
+        foreach ($value as $operator => $operatorValue) {
+            if (!is_string($operator) || !$this->supportsFilterOperator($field, $operator)) {
+                throw new ValidationException(details: [[
+                    'field' => $fieldName,
+                    'code' => 'invalid_filter_operator',
+                    'message' => sprintf(
+                        'Unsupported filter operator "%s". Allowed operators: %s.',
+                        (string) $operator,
+                        implode(', ', $this->supportedFilterOperators($field))
+                    ),
+                ]]);
+            }
+
+            [$operatorConditions, $operatorBindings] = $this->buildFilterCondition(
+                $fieldName,
+                $field,
+                $operator,
+                $operatorValue
+            );
+
+            $conditions = array_merge($conditions, $operatorConditions);
+            $bindings = array_merge($bindings, $operatorBindings);
+        }
+
+        return [$conditions, $bindings];
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, mixed>}
+     */
+    private function buildFilterCondition(string $fieldName, FieldDefinition $field, string $operator, mixed $value): array
+    {
+        $column = $this->adapter->quoteIdentifier($field->column);
+        $bindingBase = sprintf('filter_%s_%s', $this->bindingToken($fieldName), $operator);
+
+        return match ($operator) {
+            'eq' => $value === null
+                ? [[sprintf('%s IS NULL', $column)], []]
+                : [[sprintf('%s = :%s', $column, $bindingBase)], [
+                    $bindingBase => $this->normalizeScalarFilterValue($fieldName, $field, $operator, $value),
+                ]],
+            'ne' => $value === null
+                ? [[sprintf('%s IS NOT NULL', $column)], []]
+                : [[sprintf('%s <> :%s', $column, $bindingBase)], [
+                    $bindingBase => $this->normalizeScalarFilterValue($fieldName, $field, $operator, $value),
+                ]],
+            'gt', 'gte', 'lt', 'lte' => [[
+                sprintf('%s %s :%s', $column, $this->comparisonSqlOperator($operator), $bindingBase),
+            ], [
+                $bindingBase => $this->normalizeScalarFilterValue($fieldName, $field, $operator, $value),
+            ]],
+            'contains' => [[
+                sprintf(
+                    'LOWER(CAST(%s AS %s)) LIKE :%s',
+                    $column,
+                    $this->adapter->driver() === 'pgsql' ? 'TEXT' : 'CHAR(255)',
+                    $bindingBase
+                ),
+            ], [
+                $bindingBase => '%' . strtolower($this->normalizeContainsFilterValue($fieldName, $value)) . '%',
+            ]],
+            'in' => $this->buildInFilterCondition($fieldName, $field, $bindingBase, $value),
+            'null' => $this->buildNullFilterCondition($fieldName, $column, $value),
+            default => throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_operator',
+                'message' => sprintf('Unsupported filter operator "%s".', $operator),
+            ]]),
+        };
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, mixed>}
+     */
+    private function buildInFilterCondition(string $fieldName, FieldDefinition $field, string $bindingBase, mixed $value): array
+    {
+        $values = $this->normalizeInFilterValues($fieldName, $field, $value);
+        $placeholders = [];
+        $bindings = [];
+
+        foreach ($values as $index => $item) {
+            $bindingName = sprintf('%s_%d', $bindingBase, $index);
+            $placeholders[] = ':' . $bindingName;
+            $bindings[$bindingName] = $item;
+        }
+
+        return [[
+            sprintf(
+                '%s IN (%s)',
+                $this->adapter->quoteIdentifier($field->column),
+                implode(', ', $placeholders)
+            ),
+        ], $bindings];
+    }
+
+    /**
+     * @return array{0: array<int, string>, 1: array<string, mixed>}
+     */
+    private function buildNullFilterCondition(string $fieldName, string $column, mixed $value): array
+    {
+        $normalized = $this->normalizeNullFilterValue($fieldName, $value);
+
+        return [[sprintf('%s IS %sNULL', $column, $normalized ? '' : 'NOT ')], []];
     }
 
     private function buildOrderClause(CrudEntity $resource, EntityDefinition $entity, Request $request): string
@@ -622,6 +748,156 @@ final class EntityCrudService
             'decimal', 'float' => is_numeric($value) ? (float) $value : $value,
             default => $value,
         };
+    }
+
+    private function normalizeScalarFilterValue(
+        string $fieldName,
+        FieldDefinition $field,
+        string $operator,
+        mixed $value
+    ): mixed {
+        if (is_array($value)) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => sprintf('The "%s" filter operator only accepts a single scalar value.', $operator),
+            ]]);
+        }
+
+        if ($value === null && !in_array($operator, ['eq', 'ne'], true)) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => sprintf('The "%s" filter operator does not accept null values.', $operator),
+            ]]);
+        }
+
+        return $this->normalizeFilterValue($field->type, $value);
+    }
+
+    private function normalizeContainsFilterValue(string $fieldName, mixed $value): string
+    {
+        if (is_array($value)) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'The "contains" filter operator only accepts a single scalar value.',
+            ]]);
+        }
+
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'The "contains" filter operator cannot be empty.',
+            ]]);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function normalizeInFilterValues(string $fieldName, FieldDefinition $field, mixed $value): array
+    {
+        if (is_array($value) && !array_is_list($value)) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'The "in" filter operator accepts only a comma-separated string or a list of scalar values.',
+            ]]);
+        }
+
+        $values = is_array($value)
+            ? $value
+            : array_values(
+                array_filter(
+                    array_map(static fn(string $item): string => trim($item), explode(',', (string) $value)),
+                    static fn(string $item): bool => $item !== ''
+                )
+            );
+
+        if ($values === []) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'The "in" filter operator requires at least one value.',
+            ]]);
+        }
+
+        return array_map(
+            fn(mixed $item): mixed => $this->normalizeScalarFilterValue($fieldName, $field, 'in', $item),
+            $values
+        );
+    }
+
+    private function normalizeNullFilterValue(string $fieldName, mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'The "null" filter operator only accepts true or false.',
+            ]]);
+        }
+
+        return match (strtolower(trim((string) $value))) {
+            '1', 'true', 'yes', 'y', 'on' => true,
+            '0', 'false', 'no', 'n', 'off' => false,
+            default => throw new ValidationException(details: [[
+                'field' => $fieldName,
+                'code' => 'invalid_filter_value',
+                'message' => 'The "null" filter operator only accepts true or false.',
+            ]]),
+        };
+    }
+
+    private function supportsFilterOperator(FieldDefinition $field, string $operator): bool
+    {
+        return in_array($operator, $this->supportedFilterOperators($field), true);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function supportedFilterOperators(FieldDefinition $field): array
+    {
+        $operators = ['eq', 'ne', 'in', 'null'];
+
+        if (in_array($field->type, ['integer', 'bigint', 'decimal', 'float', 'date', 'datetime', 'time'], true)) {
+            $operators = array_merge($operators, ['gt', 'gte', 'lt', 'lte']);
+        }
+
+        if (in_array($field->type, ['string', 'text'], true)) {
+            $operators[] = 'contains';
+        }
+
+        return $operators;
+    }
+
+    private function comparisonSqlOperator(string $operator): string
+    {
+        return match ($operator) {
+            'gt' => '>',
+            'gte' => '>=',
+            'lt' => '<',
+            'lte' => '<=',
+            default => '=',
+        };
+    }
+
+    private function bindingToken(string $value): string
+    {
+        $token = preg_replace('/[^a-z0-9_]+/i', '_', $value) ?? $value;
+
+        return trim($token, '_');
     }
 
     private function normalizeIdentifierValue(string $type, string $id): mixed

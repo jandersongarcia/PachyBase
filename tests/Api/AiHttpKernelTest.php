@@ -9,6 +9,8 @@ use PachyBase\Config;
 use PachyBase\Database\Connection;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\ResponseCaptured;
+use PachyBase\Services\Observability\RequestContext;
+use PachyBase\Services\Observability\RequestMetrics;
 use PHPUnit\Framework\TestCase;
 
 class AiHttpKernelTest extends TestCase
@@ -21,6 +23,8 @@ class AiHttpKernelTest extends TestCase
     protected function tearDown(): void
     {
         ApiResponse::disableCapture();
+        RequestContext::clear();
+        RequestMetrics::reset();
         Connection::reset();
         Config::reset();
         $_SERVER = [];
@@ -39,12 +43,16 @@ class AiHttpKernelTest extends TestCase
             $this->fail('Expected captured response.');
         } catch (ResponseCaptured $captured) {
             $payload = $captured->getPayload();
+            $headers = $captured->getHeaders();
 
             $this->assertSame(200, $captured->getStatusCode());
             $this->assertSame('1.0', $payload['schema_version']);
             $this->assertSame('/ai/entities', $payload['navigation']['entities_url']);
             $this->assertSame('/openapi.json', $payload['openapi_compatibility']['document_url']);
             $this->assertNotEmpty($payload['entities']);
+            $this->assertArrayHasKey('Server-Timing', $headers);
+            $this->assertArrayHasKey('X-Query-Time-Ms', $headers);
+            $this->assertArrayHasKey('X-Introspection-Time-Ms', $headers);
         }
     }
 

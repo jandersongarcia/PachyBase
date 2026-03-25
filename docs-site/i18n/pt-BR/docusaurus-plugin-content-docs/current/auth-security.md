@@ -34,6 +34,7 @@ Rotas protegidas de auth:
 Rotas protegidas de CRUD:
 
 - todos os endpoints CRUD em `/api/{entity}` agora exigem credencial bearer
+- eventos sensíveis de auth e escritas do CRUD podem ser enviados para a trilha de auditoria com `APP_AUDIT_LOG_ENABLED=true`
 
 ## Fluxo de login e refresh
 
@@ -98,6 +99,14 @@ A camada de auth lê estas variáveis de ambiente:
 
 Em desenvolvimento, o PachyBase usa um segredo JWT local quando `AUTH_JWT_SECRET` não está definido. Em produção, esse segredo precisa ser configurado explicitamente.
 
+Para ambientes expostos publicamente, também revise:
+
+- `APP_RATE_LIMIT_ENABLED`
+- `APP_RATE_LIMIT_MAX_REQUESTS`
+- `APP_RATE_LIMIT_WINDOW_SECONDS`
+- `APP_AUDIT_LOG_ENABLED`
+- `APP_AUDIT_LOG_PATH`
+
 ## Exemplos de uso
 
 Login:
@@ -123,6 +132,16 @@ curl -X POST http://localhost:8080/api/auth/tokens \
   --data-urlencode name="Deploy Token" \
   --data-urlencode "scopes[0]=entity:system-settings:read"
 ```
+
+Criar um token de integracao sem login interativo:
+
+```bash
+./pachybase auth:token:create "Codex Agent" \
+  --scope=crud:read \
+  --scope=entity:system-settings:read
+```
+
+Por padrao isso cria um token service-to-service sem usuario vinculado. Adicione `--user-email=admin@pachybase.local` para associar o token a um usuario ativo existente.
 
 ## Mapa de implementação
 

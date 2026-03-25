@@ -24,6 +24,8 @@ class PachybaseCliTest extends TestCase
         $this->assertStringContainsString('version', $output);
         $this->assertStringContainsString('doctor', $output);
         $this->assertStringContainsString('acceptance:check', $output);
+        $this->assertStringContainsString('http:smoke', $output);
+        $this->assertStringContainsString('benchmark:local', $output);
         $this->assertStringContainsString('env:sync', $output);
         $this->assertStringContainsString('crud:generate', $output);
         $this->assertStringContainsString('openapi:build', $output);
@@ -69,6 +71,34 @@ class PachybaseCliTest extends TestCase
         $this->assertSame(0, $exitCode);
         $this->assertCount(1, $runner->calls);
         $this->assertStringContainsString('scripts/acceptance-check.php', $runner->calls[0]['command']);
+        $this->assertStringContainsString('--json', $runner->calls[0]['command']);
+    }
+
+    public function testHttpSmokeRunsHttpSmokeScriptLocally(): void
+    {
+        $projectPath = $this->createProjectSkeleton();
+        $runner = new RecordingProcessRunner();
+        $cli = new PachybaseCli($projectPath, $runner);
+
+        $exitCode = $cli->run(['http:smoke', '--json']);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertCount(1, $runner->calls);
+        $this->assertStringContainsString('scripts/http-smoke.php', $runner->calls[0]['command']);
+        $this->assertStringContainsString('--json', $runner->calls[0]['command']);
+    }
+
+    public function testBenchmarkLocalRunsBenchmarkScriptLocally(): void
+    {
+        $projectPath = $this->createProjectSkeleton();
+        $runner = new RecordingProcessRunner();
+        $cli = new PachybaseCli($projectPath, $runner);
+
+        $exitCode = $cli->run(['benchmark:local', '--json']);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertCount(1, $runner->calls);
+        $this->assertStringContainsString('scripts/benchmark-local.php', $runner->calls[0]['command']);
         $this->assertStringContainsString('--json', $runner->calls[0]['command']);
     }
 

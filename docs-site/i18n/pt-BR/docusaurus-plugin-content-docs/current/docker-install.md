@@ -60,6 +60,8 @@ O fluxo `install` da CLI executa estas etapas:
 5. Aguarda o banco, aplica migrations e executa seeds.
 6. Gera `build/openapi.json` e `build/ai-schema.json`.
 
+O Compose gerado tambem publica a porta do banco no host (`3306` para MySQL ou `5432` para PostgreSQL). O container da aplicacao continua usando `DB_HOST=db`, enquanto clientes externos de banco devem usar o IP ou DNS da maquina junto com `DB_PORT`.
+
 ## Wrappers legados de setup
 
 `install.sh` e `install.bat` continuam disponiveis quando voce quer chamar os wrappers de setup Docker diretamente. Eles ainda fazem o build da imagem PHP, instalam dependencias Composer no container, geram `docker/docker-compose.yml`, sobem a stack e fazem bootstrap do banco, mas a CLI continua sendo o entrypoint canonico da documentacao.

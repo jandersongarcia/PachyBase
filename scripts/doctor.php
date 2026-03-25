@@ -94,6 +94,8 @@ function doctorBuildReport(array $config, string $basePath): array
     $appEnv = strtolower(trim((string) ($config['APP_ENV'] ?? 'development')));
     $appRuntime = strtolower(trim((string) ($config['APP_RUNTIME'] ?? 'docker')));
     $driver = strtolower(trim((string) ($config['DB_DRIVER'] ?? '')));
+    $rateLimitEnabled = BooleanParser::fromMixed($config['APP_RATE_LIMIT_ENABLED'] ?? false);
+    $auditLogEnabled = BooleanParser::fromMixed($config['APP_AUDIT_LOG_ENABLED'] ?? false);
 
     $checks[] = is_file($envPath)
         ? doctorCheck('pass', 'ENV_FILE_PRESENT', '.env is present.', null)
@@ -229,6 +231,65 @@ function doctorBuildReport(array $config, string $basePath): array
         $checks[] = doctorCheck('pass', 'APP_URL_PRESENT', sprintf('APP_URL is set to "%s".', $appUrl), null);
     }
 
+    if ($rateLimitEnabled) {
+        $checks[] = doctorCheck('pass', 'RATE_LIMIT_ENABLED', 'APP_RATE_LIMIT_ENABLED is active.', null);
+    } else {
+        $checks[] = doctorCheck(
+            $appEnv === 'production' ? 'warning' : 'pass',
+            'RATE_LIMIT_DISABLED',
+            'APP_RATE_LIMIT_ENABLED is disabled.',
+            $appEnv === 'production'
+                ? 'Enable request throttling before exposing the API publicly.'
+                : null
+        );
+    }
+
+    if ($rateLimitEnabled) {
+        $maxRequests = trim((string) ($config['APP_RATE_LIMIT_MAX_REQUESTS'] ?? '120'));
+        $windowSeconds = trim((string) ($config['APP_RATE_LIMIT_WINDOW_SECONDS'] ?? '60'));
+        $storagePath = doctorResolveProjectPath($basePath, (string) ($config['APP_RATE_LIMIT_STORAGE_PATH'] ?? 'build/runtime/rate-limit.json'));
+
+        $checks[] = doctorValidatePositiveInteger(
+            $maxRequests,
+            'APP_RATE_LIMIT_MAX_REQUESTS',
+            'Set APP_RATE_LIMIT_MAX_REQUESTS to a positive integer.'
+        );
+        $checks[] = doctorValidatePositiveInteger(
+            $windowSeconds,
+            'APP_RATE_LIMIT_WINDOW_SECONDS',
+            'Set APP_RATE_LIMIT_WINDOW_SECONDS to a positive integer.'
+        );
+        $checks[] = doctorCheck(
+            'pass',
+            'RATE_LIMIT_STORAGE_PATH_REVIEWED',
+            sprintf('Rate limit storage resolves to "%s".', $storagePath),
+            null
+        );
+    }
+
+    if ($auditLogEnabled) {
+        $checks[] = doctorCheck('pass', 'AUDIT_LOG_ENABLED', 'APP_AUDIT_LOG_ENABLED is active.', null);
+    } else {
+        $checks[] = doctorCheck(
+            $appEnv === 'production' ? 'warning' : 'pass',
+            'AUDIT_LOG_DISABLED',
+            'APP_AUDIT_LOG_ENABLED is disabled.',
+            $appEnv === 'production'
+                ? 'Enable audit logging for sensitive auth and write operations before publishing.'
+                : null
+        );
+    }
+
+    if ($auditLogEnabled) {
+        $auditPath = doctorResolveProjectPath($basePath, (string) ($config['APP_AUDIT_LOG_PATH'] ?? 'build/logs/audit.jsonl'));
+        $checks[] = doctorCheck(
+            'pass',
+            'AUDIT_LOG_PATH_REVIEWED',
+            sprintf('Audit log path resolves to "%s".', $auditPath),
+            null
+        );
+    }
+
     $defaultAdminEmail = 'admin@pachybase.local';
     $defaultAdminPassword = 'pachybase123';
     $bootstrapEmail = strtolower(trim((string) ($config['AUTH_BOOTSTRAP_ADMIN_EMAIL'] ?? $defaultAdminEmail)));
@@ -290,12 +351,17 @@ function doctorInspectDockerCompose(string $composePath, string $driver, string 
     }
 
     $contents = (string) file_get_contents($composePath);
-    if (preg_match('/"(?:3306|5432):(?:3306|5432)"/', $contents) === 1) {
+    $expectedPort = match ($driver) {
+        'pgsql' => '5432',
+        default => '3306',
+    };
+
+    if (str_contains($contents, sprintf('"%1$s:%1$s"', $expectedPort))) {
         return doctorCheck(
-            'warning',
+            'pass',
             'DOCKER_DATABASE_PORT_PUBLISHED',
-            'docker/docker-compose.yml publishes a database port to the host.',
-            'Prefer leaving the database reachable only inside the Compose network.'
+            sprintf('docker/docker-compose.yml publishes the database port %s to the host.', $expectedPort),
+            null
         );
     }
 
@@ -317,7 +383,12 @@ function doctorInspectDockerCompose(string $composePath, string $driver, string 
         );
     }
 
-    return doctorCheck('pass', 'DOCKER_COMPOSE_REVIEWED', 'docker/docker-compose.yml does not expose the database port.', null);
+    return doctorCheck(
+        'warning',
+        'DOCKER_DATABASE_PORT_NOT_PUBLISHED',
+        'docker/docker-compose.yml does not publish the database port to the host.',
+        'Regenerate the Compose file with "./pachybase docker:sync" to enable external database access.'
+    );
 }
 
 /**
@@ -346,6 +417,38 @@ function doctorInspectDockerfile(string $dockerfilePath, string $appRuntime): ar
     }
 
     return doctorCheck('pass', 'DOCKERFILE_REVIEWED', 'docker/Dockerfile uses pinned base images.', null);
+}
+
+/**
+ * @return array{status: string, code: string, message: string, hint: string|null}
+ */
+function doctorValidatePositiveInteger(string $value, string $field, string $hint): array
+{
+    if ($value !== '' && ctype_digit($value) && (int) $value > 0) {
+        return doctorCheck('pass', $field . '_VALID', sprintf('%s is set to "%s".', $field, $value), null);
+    }
+
+    return doctorCheck(
+        'error',
+        $field . '_INVALID',
+        sprintf('%s "%s" is invalid.', $field, $value === '' ? '(empty)' : $value),
+        $hint
+    );
+}
+
+function doctorResolveProjectPath(string $basePath, string $path): string
+{
+    $trimmed = trim($path);
+
+    if ($trimmed === '') {
+        return $basePath;
+    }
+
+    if (preg_match('/^[A-Za-z]:[\\\\\\/]/', $trimmed) === 1 || str_starts_with($trimmed, '/') || str_starts_with($trimmed, '\\')) {
+        return $trimmed;
+    }
+
+    return rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $trimmed);
 }
 
 /**

@@ -7,6 +7,7 @@ namespace PachyBase\Database\Query;
 use PDO;
 use PDOException;
 use PDOStatement;
+use PachyBase\Services\Observability\RequestMetrics;
 use Throwable;
 
 final class PdoQueryExecutor implements QueryExecutorInterface
@@ -85,6 +86,8 @@ final class PdoQueryExecutor implements QueryExecutorInterface
      */
     private function run(string $sql, array $bindings): PDOStatement
     {
+        $startedAt = hrtime(true);
+
         try {
             $statement = $this->pdo->prepare($sql);
 
@@ -111,6 +114,8 @@ final class PdoQueryExecutor implements QueryExecutorInterface
                 (int) $exception->getCode(),
                 $exception
             );
+        } finally {
+            RequestMetrics::recordQuery((hrtime(true) - $startedAt) / 1_000_000);
         }
     }
 

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("install", "docker-install")]
+    [ValidateSet("install", "docker-install", "compose-sync")]
     [string] $Mode = "install"
 )
 
@@ -136,22 +136,12 @@ function Validate-DatabaseConfig {
     return $resolved
 }
 
-function New-RandomHex {
-    param([int] $Length = 32)
-
-    $bytes = New-Object byte[] ($Length / 2)
-    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
-    return -join ($bytes | ForEach-Object { $_.ToString("x2") })
-}
-
 function Get-DatabaseEnvironmentLines {
     param([hashtable] $Config)
 
     if ($Config["DB_DRIVER"] -eq "mysql") {
         $lines = @(
-            "      MYSQL_ROOT_PASSWORD: `"$(
-                if ($Config["DB_USERNAME"].ToLowerInvariant() -eq "root") { $Config["DB_PASSWORD"] } else { New-RandomHex }
-            )`"",
+            "      MYSQL_ROOT_PASSWORD: `"$($Config["DB_PASSWORD"])`"",
             "      MYSQL_DATABASE: `"$($Config["DB_DATABASE"])`""
         )
 
@@ -170,10 +160,17 @@ function Get-DatabaseEnvironmentLines {
     )
 }
 
+function Get-DatabaseVolumeName {
+    param([hashtable] $Config)
+
+    return "db_$($Config["DB_DRIVER"])_data"
+}
+
 function Write-DockerComposeFile {
     param([hashtable] $Config)
 
     $databaseEnvironment = Get-DatabaseEnvironmentLines -Config $Config
+    $databaseVolume = Get-DatabaseVolumeName -Config $Config
     $compose = @(
         'services:',
         '  web:',
@@ -199,16 +196,18 @@ function Write-DockerComposeFile {
         '  db:',
         "    image: $($Config["DB_IMAGE"])",
         '    restart: unless-stopped',
+        '    ports:',
+        "      - `"$($Config["DB_PORT"]):$($Config["DB_PORT"])`"",
         '    environment:'
     )
 
     $compose += $databaseEnvironment
     $compose += @(
         '    volumes:',
-        "      - db_data:$($Config["DB_VOLUME_PATH"])",
+        "      - ${databaseVolume}:$($Config["DB_VOLUME_PATH"])",
         '',
         'volumes:',
-        '  db_data:',
+        "  ${databaseVolume}:",
         ''
     )
 
@@ -256,6 +255,10 @@ $config = Validate-DatabaseConfig -Config (Read-EnvFile -Path $envPath)
 
 Write-Step "Generating docker/docker-compose.yml"
 Write-DockerComposeFile -Config $config
+
+if ($Mode -eq "compose-sync") {
+    exit 0
+}
 
 Write-Step "Building the PHP image with Composer available"
 Invoke-DockerCompose -Arguments @("build", "php")

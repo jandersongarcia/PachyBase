@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Http;
 
+use PachyBase\Config;
 use PachyBase\Http\ApiResponse;
 use PachyBase\Http\ResponseCaptured;
+use PachyBase\Services\Observability\RequestMetrics;
 use PHPUnit\Framework\TestCase;
 
 class ApiResponseTest extends TestCase
@@ -13,6 +15,8 @@ class ApiResponseTest extends TestCase
     protected function tearDown(): void
     {
         ApiResponse::disableCapture();
+        Config::reset();
+        RequestMetrics::reset();
         $_SERVER = [];
     }
 
@@ -28,6 +32,7 @@ class ApiResponseTest extends TestCase
             $this->fail('Expected captured response.');
         } catch (ResponseCaptured $captured) {
             $payload = $captured->getPayload();
+            $headers = $captured->getHeaders();
 
             $this->assertSame(200, $captured->getStatusCode());
             $this->assertTrue($payload['success']);
@@ -39,6 +44,11 @@ class ApiResponseTest extends TestCase
             $this->assertSame('/status', $payload['meta']['path']);
             $this->assertArrayHasKey('timestamp', $payload['meta']);
             $this->assertSame('system.status', $payload['meta']['resource']);
+            $this->assertSame('req-123', $headers['X-Request-Id']);
+            $this->assertArrayHasKey('Server-Timing', $headers);
+            $this->assertArrayHasKey('X-Response-Time-Ms', $headers);
+            $this->assertArrayHasKey('X-Query-Time-Ms', $headers);
+            $this->assertArrayHasKey('X-Introspection-Time-Ms', $headers);
         }
     }
 
@@ -143,6 +153,57 @@ class ApiResponseTest extends TestCase
             $this->assertArrayHasKey('timestamp', $payload['meta']);
             $this->assertSame('DELETE', $payload['meta']['method']);
             $this->assertSame('/admin/users/7', $payload['meta']['path']);
+        }
+    }
+
+    public function testSuccessResponseIncludesCorsHeadersWhenOriginIsAllowed(): void
+    {
+        Config::override([
+            'APP_CORS_ALLOWED_ORIGINS' => 'https://app.example.com',
+            'APP_CORS_ALLOWED_HEADERS' => 'Authorization, Content-Type',
+            'APP_CORS_EXPOSED_HEADERS' => 'X-Request-Id',
+            'APP_CORS_ALLOW_CREDENTIALS' => 'true',
+            'APP_CORS_MAX_AGE' => '600',
+        ]);
+        ApiResponse::enableCapture();
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/system';
+        $_SERVER['HTTP_ORIGIN'] = 'https://app.example.com';
+
+        try {
+            ApiResponse::success(['status' => 'ok']);
+            $this->fail('Expected captured response.');
+        } catch (ResponseCaptured $captured) {
+            $headers = $captured->getHeaders();
+
+            $this->assertSame('https://app.example.com', $headers['Access-Control-Allow-Origin']);
+            $this->assertSame('true', $headers['Access-Control-Allow-Credentials']);
+            $this->assertSame('X-Request-Id', $headers['Access-Control-Expose-Headers']);
+            $this->assertStringContainsString('Origin', $headers['Vary']);
+            $this->assertArrayHasKey('X-Request-Id', $headers);
+        }
+    }
+
+    public function testSuccessResponseExposesMeasuredTimingsInHeaders(): void
+    {
+        ApiResponse::enableCapture();
+        RequestMetrics::start();
+        RequestMetrics::recordQuery(5.25);
+        RequestMetrics::recordIntrospection(3.50);
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/metrics';
+
+        try {
+            ApiResponse::success(['status' => 'ok']);
+            $this->fail('Expected captured response.');
+        } catch (ResponseCaptured $captured) {
+            $headers = $captured->getHeaders();
+
+            $this->assertStringContainsString('app;dur=', $headers['Server-Timing']);
+            $this->assertStringContainsString('db;dur=5.25', $headers['Server-Timing']);
+            $this->assertStringContainsString('introspection;dur=3.50', $headers['Server-Timing']);
+            $this->assertSame('5.25', $headers['X-Query-Time-Ms']);
+            $this->assertSame('3.50', $headers['X-Introspection-Time-Ms']);
         }
     }
 }

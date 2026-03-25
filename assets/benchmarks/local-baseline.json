@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "name": "local-default",
+  "scenarios": [
+    {
+      "name": "root_status",
+      "method": "GET",
+      "path": "/",
+      "iterations": 10,
+      "expect_status": 200,
+      "max_average_ms": 450,
+      "max_p95_ms": 650
+    },
+    {
+      "name": "openapi_document",
+      "method": "GET",
+      "path": "/openapi.json",
+      "iterations": 8,
+      "expect_status": 200,
+      "max_average_ms": 700,
+      "max_p95_ms": 900
+    },
+    {
+      "name": "ai_schema",
+      "method": "GET",
+      "path": "/ai/schema",
+      "iterations": 6,
+      "expect_status": 200,
+      "max_average_ms": 700,
+      "max_p95_ms": 900
+    },
+    {
+      "name": "crud_collection",
+      "method": "GET",
+      "path": "/api/{entity}?per_page=1",
+      "iterations": 6,
+      "expect_status": 200,
+      "max_average_ms": 300,
+      "max_p95_ms": 450,
+      "requires_token": true
+    }
+  ]
+}

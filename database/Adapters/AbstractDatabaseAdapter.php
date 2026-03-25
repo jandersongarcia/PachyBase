@@ -45,13 +45,7 @@ abstract class AbstractDatabaseAdapter implements DatabaseAdapterInterface
             $tableDefinition = new TableDefinition($table, $this->schemaName, 'BASE TABLE');
         }
 
-        return new TableSchema(
-            $tableDefinition,
-            $this->listColumns($table),
-            $this->listPrimaryKey($table),
-            $this->listIndexes($table),
-            $this->listRelations($table)
-        );
+        return $this->buildTableSchema($tableDefinition);
     }
 
     public function inspectDatabase(): DatabaseSchema
@@ -59,7 +53,7 @@ abstract class AbstractDatabaseAdapter implements DatabaseAdapterInterface
         $tables = [];
 
         foreach ($this->listTables() as $table) {
-            $tables[] = $this->inspectTable($table->name);
+            $tables[] = $this->buildTableSchema($table);
         }
 
         return new DatabaseSchema(
@@ -79,6 +73,17 @@ abstract class AbstractDatabaseAdapter implements DatabaseAdapterInterface
         );
 
         return implode('.', $segments);
+    }
+
+    protected function buildTableSchema(TableDefinition $tableDefinition): TableSchema
+    {
+        return new TableSchema(
+            $tableDefinition,
+            $this->listColumns($tableDefinition->name),
+            $this->listPrimaryKey($tableDefinition->name),
+            $this->listIndexes($tableDefinition->name),
+            $this->listRelations($tableDefinition->name)
+        );
     }
 
     /**

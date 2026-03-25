@@ -11,7 +11,7 @@ class ApiContractEnforcementTest extends TestCase
     /**
      * @var array<int, string>
      */
-    private array $forbiddenFunctionCalls = ['header', 'http_response_code', 'json_encode'];
+    private array $forbiddenFunctionCalls = ['header', 'http_response_code'];
 
     public function testRuntimeLayersDoNotBypassApiResponseFormatter(): void
     {

@@ -43,6 +43,32 @@ DB_PASSWORD=change_this_password
 - `AUTH_BOOTSTRAP_ADMIN_PASSWORD`: development bootstrap admin password
 - `AUTH_BOOTSTRAP_ADMIN_NAME`: development bootstrap admin display name
 
+## Optional CORS values
+
+- `APP_CORS_ALLOWED_ORIGINS`: comma-separated allowed origins. Leave empty to keep CORS disabled.
+- `APP_CORS_ALLOWED_HEADERS`: comma-separated allow-list for browser preflight headers
+- `APP_CORS_EXPOSED_HEADERS`: comma-separated response headers that browsers may read
+- `APP_CORS_ALLOW_CREDENTIALS`: `true` to allow credentialed cross-origin requests
+- `APP_CORS_MAX_AGE`: browser preflight cache duration in seconds, default `600`
+
+When CORS is enabled, PachyBase automatically handles `OPTIONS` preflight requests for known routes and derives the allowed methods from the registered route surface.
+
+## Optional rate limit values
+
+- `APP_RATE_LIMIT_ENABLED`: `true` to enable request throttling
+- `APP_RATE_LIMIT_MAX_REQUESTS`: maximum requests per window, default `120`
+- `APP_RATE_LIMIT_WINDOW_SECONDS`: throttling window size in seconds, default `60`
+- `APP_RATE_LIMIT_STORAGE_PATH`: file used to persist counters, default `build/runtime/rate-limit.json`
+
+The current implementation uses a lightweight file-backed fixed window keyed by bearer token when present, or by client IP otherwise.
+
+## Optional audit values
+
+- `APP_AUDIT_LOG_ENABLED`: `true` to append audit entries for sensitive auth and CRUD write operations
+- `APP_AUDIT_LOG_PATH`: JSONL file path for audit entries, default `build/logs/audit.jsonl`
+
+Each audit entry includes `timestamp`, `request_id`, `method`, `path`, client IP, principal metadata when available, and a small action-specific context payload.
+
 ## CRUD configuration
 
 `config/CrudEntities.php` is where the automatic CRUD surface is curated. Each entity can define:
@@ -59,6 +85,8 @@ DB_PASSWORD=change_this_password
 - Set `APP_ENV=production`
 - Set `APP_DEBUG=false`
 - Define `AUTH_JWT_SECRET`
+- Enable `APP_RATE_LIMIT_ENABLED`
+- Enable `APP_AUDIT_LOG_ENABLED`
 - Review exposed entities in `config/CrudEntities.php`
 - Rotate the bootstrap admin credentials before first public use
 

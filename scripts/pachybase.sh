@@ -38,7 +38,13 @@ ensure_env_file() {
 }
 
 ensure_compose() {
+  ensure_compose_synced
   [[ -f "$COMPOSE_PATH" ]] || step_fail "docker/docker-compose.yml was not found. Run ./pachybase docker:sync first."
+}
+
+ensure_compose_synced() {
+  ensure_env_file
+  bash "$SETUP_SCRIPT" compose-sync >/dev/null
 }
 
 docker_compose() {

@@ -2,7 +2,7 @@
 
 PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
 
-Current stage: release candidate `1.0.0-rc.1`
+Current stage: release candidate `1.0.0-rc.2`
 
 ## Quick start (Docker)
 
@@ -21,14 +21,19 @@ Copy-Item .env.example .env
 After installation:
 
 - API base URL: `http://localhost:8080`
+- Database port on the host: `3306` for MySQL or `5432` for PostgreSQL
 - OpenAPI document: `http://localhost:8080/openapi.json`
 - AI schema: `http://localhost:8080/ai/schema`
+- MCP adapter: `./pachybase mcp:serve`
 - Development admin: `admin@pachybase.local` / `pachybase123`
 
 Before exposing the project to third parties, run:
 
 ```bash
 ./pachybase doctor
+./pachybase http:smoke
+./pachybase benchmark:local
+./pachybase acceptance:check
 ```
 
 ## Installation paths
@@ -54,6 +59,9 @@ Documentation entry points:
 - Automatic CRUD driven by `config/CrudEntities.php`
 - Generated OpenAPI 3.0.3 document
 - AI-friendly discovery endpoints
+- MCP stdio adapter for agent tooling
+- acceptance smoke check for HTTP and MCP release validation
+- dedicated HTTP smoke checks and a versioned local benchmark baseline
 - PHPUnit regression suite
 
 ## Runtime surface
@@ -107,9 +115,22 @@ DB_USERNAME=pachybase
 DB_PASSWORD=change_this_password
 ```
 
+When `APP_RUNTIME=docker`, PachyBase keeps `DB_HOST=db` for the application container, and also publishes the database port on the host machine. External tools should connect to the server IP or DNS name using `DB_PORT`.
+
 Optional values include:
 
 - `APP_KEY`
+- `APP_CORS_ALLOWED_ORIGINS`
+- `APP_CORS_ALLOWED_HEADERS`
+- `APP_CORS_EXPOSED_HEADERS`
+- `APP_CORS_ALLOW_CREDENTIALS`
+- `APP_CORS_MAX_AGE`
+- `APP_RATE_LIMIT_ENABLED`
+- `APP_RATE_LIMIT_MAX_REQUESTS`
+- `APP_RATE_LIMIT_WINDOW_SECONDS`
+- `APP_RATE_LIMIT_STORAGE_PATH`
+- `APP_AUDIT_LOG_ENABLED`
+- `APP_AUDIT_LOG_PATH`
 - `DB_SCHEMA` for PostgreSQL
 - `AUTH_JWT_SECRET`
 - `AUTH_JWT_ISSUER`
@@ -161,6 +182,27 @@ PachyBase supports:
 
 Protected endpoints expect `Authorization: Bearer <token>`.
 
+## Browser Integration and CORS
+
+PachyBase now supports automatic `OPTIONS` preflight handling and configurable CORS for browser-based apps.
+
+To enable cross-origin access, define the allowed origins in `.env`:
+
+```env
+APP_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:5173
+APP_CORS_ALLOWED_HEADERS=Authorization,Content-Type,X-Requested-With,X-Request-Id
+APP_CORS_EXPOSED_HEADERS=
+APP_CORS_ALLOW_CREDENTIALS=false
+APP_CORS_MAX_AGE=600
+```
+
+Notes:
+
+- Leave `APP_CORS_ALLOWED_ORIGINS` empty to keep CORS disabled
+- The runtime automatically answers browser preflight requests for known routes
+- Allowed methods are derived from the registered route surface for each path
+- If you use wildcard origins with credentials enabled, PachyBase echoes the request origin instead of returning `*`
+
 ## Automatic CRUD, filters, and pagination
 
 CRUD exposure is driven by `config/CrudEntities.php`.
@@ -168,7 +210,7 @@ CRUD exposure is driven by `config/CrudEntities.php`.
 The current runtime supports:
 
 - pagination with `page` and `per_page`
-- equality filters with `filter[field]=value`
+- equality and operator filters with `filter[field]=value` and `filter[field][operator]=value`
 - sorting with `sort=field` and `sort=-field`
 - search with `search=term`
 
@@ -178,6 +220,29 @@ Example:
 curl "http://localhost:8080/api/system-settings?filter[is_public]=1&sort=setting_key" \
   -H "Authorization: Bearer <access-token>"
 ```
+
+## Operational hardening
+
+PachyBase can now enforce a simple file-backed rate limit and append an audit trail for sensitive auth and CRUD write operations.
+
+```env
+APP_RATE_LIMIT_ENABLED=true
+APP_RATE_LIMIT_MAX_REQUESTS=120
+APP_RATE_LIMIT_WINDOW_SECONDS=60
+APP_AUDIT_LOG_ENABLED=true
+APP_AUDIT_LOG_PATH=build/logs/audit.jsonl
+```
+
+Responses also expose the current request identifier in the `X-Request-Id` header.
+
+For minimal observability, every HTTP response now also exposes:
+
+- `Server-Timing`
+- `X-Response-Time-Ms`
+- `X-Query-Time-Ms`
+- `X-Introspection-Time-Ms`
+
+Structured logs for auth, CRUD, and error flows are written to `APP_AUDIT_LOG_PATH` when audit logging is enabled.
 
 ## OpenAPI and AI endpoints
 
@@ -196,6 +261,18 @@ curl http://localhost:8080/ai/entities
 curl http://localhost:8080/ai/entity/system-settings
 ```
 
+Integration token for agents:
+
+```bash
+./pachybase auth:token:create "Codex Agent" --scope=crud:read --scope=entity:system-settings:read
+```
+
+Optional user binding:
+
+```bash
+./pachybase auth:token:create "Claude Agent" --scope=crud:read --user-email=admin@pachybase.local
+```
+
 ## CLI
 
 Lifecycle:
@@ -204,6 +281,8 @@ Lifecycle:
 - `start`
 - `stop`
 - `doctor`
+- `http:smoke`
+- `benchmark:local`
 - `status`
 - `test`
 
@@ -243,6 +322,7 @@ Scaffolding:
 Build and inspection:
 
 - `auth:install`
+- `auth:token:create`
 - `entity:list`
 - `crud:sync`
 - `openapi:build`
@@ -306,6 +386,8 @@ Release readiness check:
 
 ```bash
 ./pachybase doctor
+./pachybase http:smoke
+./pachybase benchmark:local
 ```
 
 ## Contributing and roadmap

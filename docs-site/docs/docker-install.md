@@ -62,6 +62,8 @@ The CLI install flow performs these steps:
 5. Waits for the database, applies migrations, and runs seeds.
 6. Generates `build/openapi.json` and `build/ai-schema.json`.
 
+The generated Compose file also publishes the database port on the host (`3306` for MySQL or `5432` for PostgreSQL). The app container still uses `DB_HOST=db`, while external database clients should use the machine IP or DNS name together with `DB_PORT`.
+
 ## Legacy setup wrappers
 
 `install.sh` and `install.bat` remain available when you explicitly want the lower-level Docker setup wrappers. They still build the PHP image, install Composer dependencies in the container, generate `docker/docker-compose.yml`, start the stack, and bootstrap the database, but the CLI remains the canonical documented entrypoint.

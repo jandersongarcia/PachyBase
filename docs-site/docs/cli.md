@@ -31,6 +31,7 @@ Lifecycle:
 - `start`: start Docker services or the local PHP runtime based on `APP_RUNTIME`
 - `stop`: stop the active runtime
 - `doctor`: validate runtime posture, env consistency, Docker alignment, and release-sensitive settings
+- `acceptance:check`: run smoke checks against a live PachyBase runtime, including HTTP discovery and MCP adapter validation
 - `status`: return a quick health view for runtime, database, auth, and generated docs
 - `test`: run the PHPUnit suite in Docker or locally, depending on the configured runtime
 
@@ -70,6 +71,8 @@ Scaffolding:
 Build and inspection:
 
 - `auth:install`: configure the default auth secrets and optionally prepare auth persistence
+- `auth:token:create`: create an API token with explicit scopes and optional user binding
+- `mcp:serve`: start the MCP stdio adapter that wraps the live PachyBase HTTP API
 - `entity:list`: inspect normalized entity metadata
 - `crud:sync`: regenerate `config/CrudEntities.php` from the active schema
 - `openapi:build`: write a static OpenAPI document, by default to `build/openapi.json`
@@ -81,6 +84,7 @@ Build and inspection:
 ```bash
 ./pachybase install
 ./pachybase status
+./pachybase acceptance:check
 ./pachybase entity:list
 ./pachybase crud:generate --expose-new
 ./pachybase openapi:build
@@ -108,6 +112,7 @@ vendor/bin/phpunit --testdox
 
 - `env:sync --force`: overwrite the current `.env`
 - `env:validate --json`: print the env validation report as JSON
+- `acceptance:check --json`: print the acceptance smoke report as JSON
 - `app:key --force`: rotate the application key intentionally
 - `crud:sync --expose-new`: mark newly introspected entities as exposed
 - `crud:sync --output=path/to/CrudEntities.php`: write the CRUD config somewhere else
@@ -115,3 +120,5 @@ vendor/bin/phpunit --testdox
 - `make:test Example --type=functional`: create a functional test skeleton
 - `openapi:build --output=docs-site/static/openapi.json`: publish the generated specification to a custom path
 - `ai:build --output=build/ai-schema.json`: publish the AI schema to a custom path
+- `auth:token:create "Codex Agent" --scope=crud:read --scope=entity:system-settings:read`: create a scoped integration token
+- `mcp:serve --base-url=http://localhost:8080`: point the MCP adapter to a specific PachyBase runtime

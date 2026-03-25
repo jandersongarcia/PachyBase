@@ -96,6 +96,15 @@ class RouterTest extends TestCase
 
         $router->dispatch($this->makeRequest('GET', '/broken'));
     }
+
+    public function testReturnsAllowedMethodsForMatchingPath(): void
+    {
+        $router = new Router();
+        $router->get('/resource', fn(Request $r) => null);
+        $router->post('/resource', fn(Request $r) => null);
+
+        $this->assertSame(['GET', 'POST'], $router->allowedMethodsForPath('/resource'));
+    }
 }
 
 final class RouterMiddlewareRecorder

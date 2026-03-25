@@ -48,6 +48,8 @@ final class PachybaseCli
                 'stop' => $this->stop(),
                 'doctor' => $this->doctor($arguments),
                 'acceptance:check' => $this->acceptanceCheck($arguments),
+                'http:smoke' => $this->httpSmoke($arguments),
+                'benchmark:local' => $this->benchmarkLocal($arguments),
                 'status' => $this->status($arguments),
                 'env:sync' => $this->envSync($arguments),
                 'env:validate' => $this->envValidate($arguments),
@@ -101,6 +103,8 @@ Lifecycle:
   stop
   doctor
   acceptance:check
+  http:smoke
+  benchmark:local
   status
   test
 
@@ -146,6 +150,8 @@ Examples:
   php scripts/pachybase.php install
   php scripts/pachybase.php status --json
   php scripts/pachybase.php acceptance:check --json
+  php scripts/pachybase.php http:smoke --json
+  php scripts/pachybase.php benchmark:local --json
   php scripts/pachybase.php make:migration create_orders_table
   php scripts/pachybase.php crud:generate --expose-new
   php scripts/pachybase.php auth:token:create "Codex Agent" --scope=crud:read
@@ -276,6 +282,22 @@ TEXT);
     private function acceptanceCheck(array $arguments): int
     {
         return $this->runCommand($this->localPhpCommand(['scripts/acceptance-check.php', ...$arguments]));
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function httpSmoke(array $arguments): int
+    {
+        return $this->runCommand($this->localPhpCommand(['scripts/http-smoke.php', ...$arguments]));
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function benchmarkLocal(array $arguments): int
+    {
+        return $this->runCommand($this->localPhpCommand(['scripts/benchmark-local.php', ...$arguments]));
     }
 
     /**

@@ -35,10 +35,6 @@ get_config_value() {
   printf '%s' "$default_value"
 }
 
-random_hex() {
-  od -An -N16 -tx1 /dev/urandom | tr -d ' \n'
-}
-
 declare -A CONFIG
 
 read_env_file() {
@@ -105,17 +101,11 @@ validate_database_config() {
 
 write_docker_compose_file() {
   local db_environment
+  local db_volume_name="db_${DB_DRIVER}_data"
 
   if [[ "$DB_DRIVER" == "mysql" ]]; then
-    local root_password
-    if [[ "${DB_USERNAME,,}" == "root" ]]; then
-      root_password="$DB_PASSWORD"
-    else
-      root_password="$(random_hex)"
-    fi
-
     db_environment=$(cat <<EOF
-      MYSQL_ROOT_PASSWORD: "$root_password"
+      MYSQL_ROOT_PASSWORD: "$DB_PASSWORD"
       MYSQL_DATABASE: "$DB_DATABASE"
 EOF
 )
@@ -158,13 +148,15 @@ services:
   db:
     image: $DB_IMAGE
     restart: unless-stopped
+    ports:
+      - "$DB_PORT:$DB_PORT"
     environment:
 $db_environment
     volumes:
-      - db_data:$DB_VOLUME_PATH
+      - $db_volume_name:$DB_VOLUME_PATH
 
 volumes:
-  db_data:
+  $db_volume_name:
 EOF
 }
 
@@ -194,6 +186,10 @@ validate_database_config
 
 step "Generating docker/docker-compose.yml"
 write_docker_compose_file
+
+if [[ "$MODE" == "compose-sync" ]]; then
+  exit 0
+fi
 
 step "Building the PHP image with Composer available"
 invoke_docker_compose build php

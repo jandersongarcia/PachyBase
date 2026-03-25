@@ -43,6 +43,32 @@ DB_PASSWORD=change_this_password
 - `AUTH_BOOTSTRAP_ADMIN_PASSWORD`: senha do admin bootstrap de desenvolvimento
 - `AUTH_BOOTSTRAP_ADMIN_NAME`: nome exibido do admin bootstrap de desenvolvimento
 
+## Valores opcionais de CORS
+
+- `APP_CORS_ALLOWED_ORIGINS`: origens permitidas separadas por virgula. Deixe vazio para manter o CORS desativado.
+- `APP_CORS_ALLOWED_HEADERS`: lista separada por virgula para os headers aceitos no preflight do browser
+- `APP_CORS_EXPOSED_HEADERS`: headers de resposta que o browser pode ler
+- `APP_CORS_ALLOW_CREDENTIALS`: use `true` para permitir requisicoes cross-origin com credenciais
+- `APP_CORS_MAX_AGE`: tempo de cache do preflight no browser em segundos, padrao `600`
+
+Quando o CORS estiver ativo, o PachyBase responde automaticamente requisicoes `OPTIONS` de preflight para rotas conhecidas e deriva os metodos permitidos a partir das rotas registradas.
+
+## Valores opcionais de rate limit
+
+- `APP_RATE_LIMIT_ENABLED`: use `true` para ativar throttling de requisicoes
+- `APP_RATE_LIMIT_MAX_REQUESTS`: maximo de requisicoes por janela, padrao `120`
+- `APP_RATE_LIMIT_WINDOW_SECONDS`: duracao da janela em segundos, padrao `60`
+- `APP_RATE_LIMIT_STORAGE_PATH`: arquivo usado para persistir contadores, padrao `build/runtime/rate-limit.json`
+
+A implementacao atual usa uma janela fixa com armazenamento em arquivo, usando bearer token quando presente ou IP do cliente como chave.
+
+## Valores opcionais de auditoria
+
+- `APP_AUDIT_LOG_ENABLED`: use `true` para registrar eventos sensiveis de auth e escritas do CRUD
+- `APP_AUDIT_LOG_PATH`: caminho do arquivo JSONL de auditoria, padrao `build/logs/audit.jsonl`
+
+Cada entrada inclui `timestamp`, `request_id`, `method`, `path`, IP do cliente, principal autenticado quando houver e um contexto pequeno da acao.
+
 ## Configuracao do CRUD
 
 `config/CrudEntities.php` e onde a superficie do CRUD automatico e curada. Cada entidade pode definir:
@@ -59,6 +85,8 @@ DB_PASSWORD=change_this_password
 - Definir `APP_ENV=production`
 - Definir `APP_DEBUG=false`
 - Configurar `AUTH_JWT_SECRET`
+- Ativar `APP_RATE_LIMIT_ENABLED`
+- Ativar `APP_AUDIT_LOG_ENABLED`
 - Revisar as entidades expostas em `config/CrudEntities.php`
 - Trocar as credenciais bootstrap antes do primeiro uso publico
 
