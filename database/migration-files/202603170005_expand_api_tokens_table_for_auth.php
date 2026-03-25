@@ -24,12 +24,12 @@ return new class extends AbstractSqlMigration {
             return [
                 <<<SQL
                 ALTER TABLE {$table}
-                    ADD COLUMN IF NOT EXISTS `user_id` BIGINT UNSIGNED NULL,
-                    ADD COLUMN IF NOT EXISTS `token_prefix` VARCHAR(32) NULL,
-                    ADD COLUMN IF NOT EXISTS `scopes` VARCHAR(2000) NOT NULL DEFAULT '[]',
-                    ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) NOT NULL DEFAULT 1,
-                    ADD COLUMN IF NOT EXISTS `expires_at` DATETIME NULL,
-                    ADD COLUMN IF NOT EXISTS `revoked_at` DATETIME NULL
+                    ADD COLUMN `user_id` BIGINT UNSIGNED NULL,
+                    ADD COLUMN `token_prefix` VARCHAR(32) NULL,
+                    ADD COLUMN `scopes` VARCHAR(2000) NOT NULL DEFAULT '[]',
+                    ADD COLUMN `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                    ADD COLUMN `expires_at` DATETIME NULL,
+                    ADD COLUMN `revoked_at` DATETIME NULL
                 SQL,
             ];
         }
@@ -55,12 +55,12 @@ return new class extends AbstractSqlMigration {
             return [
                 <<<SQL
                 ALTER TABLE {$table}
-                    DROP COLUMN IF EXISTS `user_id`,
-                    DROP COLUMN IF EXISTS `token_prefix`,
-                    DROP COLUMN IF EXISTS `scopes`,
-                    DROP COLUMN IF EXISTS `is_active`,
-                    DROP COLUMN IF EXISTS `expires_at`,
-                    DROP COLUMN IF EXISTS `revoked_at`
+                    DROP COLUMN `user_id`,
+                    DROP COLUMN `token_prefix`,
+                    DROP COLUMN `scopes`,
+                    DROP COLUMN `is_active`,
+                    DROP COLUMN `expires_at`,
+                    DROP COLUMN `revoked_at`
                 SQL,
             ];
         }

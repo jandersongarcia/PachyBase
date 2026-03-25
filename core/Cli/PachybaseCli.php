@@ -19,6 +19,8 @@ final class PachybaseCli
         '-h' => 'help',
         'env:init' => 'env:sync',
         'docker:install' => 'docker:sync',
+        'compose-sync' => 'docker:sync',
+        'compose:sync' => 'docker:sync',
         'release:check' => 'doctor',
         'migrate' => 'db:migrate',
         'migrate:rollback' => 'db:rollback',
@@ -45,10 +47,13 @@ final class PachybaseCli
                 'start' => $this->start(),
                 'stop' => $this->stop(),
                 'doctor' => $this->doctor($arguments),
+                'acceptance:check' => $this->acceptanceCheck($arguments),
                 'status' => $this->status($arguments),
                 'env:sync' => $this->envSync($arguments),
                 'env:validate' => $this->envValidate($arguments),
                 'app:key' => $this->appKey($arguments),
+                'auth:token:create' => $this->authTokenCreate($arguments),
+                'mcp:serve' => $this->mcpServe($arguments),
                 'docker:sync' => $this->dockerSync(),
                 'docker:up' => $this->dockerUp(),
                 'docker:down' => $this->dockerDown(),
@@ -95,6 +100,7 @@ Lifecycle:
   start
   stop
   doctor
+  acceptance:check
   status
   test
 
@@ -129,6 +135,8 @@ Scaffolding:
 
 Build:
   auth:install
+  auth:token:create
+  mcp:serve
   openapi:build
   ai:build
   entity:list
@@ -137,8 +145,11 @@ Build:
 Examples:
   php scripts/pachybase.php install
   php scripts/pachybase.php status --json
+  php scripts/pachybase.php acceptance:check --json
   php scripts/pachybase.php make:migration create_orders_table
   php scripts/pachybase.php crud:generate --expose-new
+  php scripts/pachybase.php auth:token:create "Codex Agent" --scope=crud:read
+  php scripts/pachybase.php mcp:serve
   php scripts/pachybase.php openapi:build --output=docs-site/static/openapi.json
 
 TEXT);
@@ -181,12 +192,7 @@ TEXT);
         }
 
         if ($this->runtimeMode() === 'docker') {
-            $exitCode = $this->dockerSync();
-            if ($exitCode !== 0) {
-                return $exitCode;
-            }
-
-            $exitCode = $this->dockerUp();
+            $exitCode = $this->prepareDockerRuntime();
             if ($exitCode !== 0) {
                 return $exitCode;
             }
@@ -222,7 +228,7 @@ TEXT);
     private function start(): int
     {
         if ($this->runtimeMode() === 'docker') {
-            $exitCode = $this->dockerUp();
+            $exitCode = $this->prepareDockerRuntime();
 
             if ($exitCode === 0) {
                 $this->write(sprintf("Docker runtime started at %s\n", $this->envManager()->appUrl()));
@@ -262,6 +268,14 @@ TEXT);
     private function doctor(array $arguments): int
     {
         return $this->runCommand($this->localPhpCommand(['scripts/doctor.php', ...$arguments]));
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function acceptanceCheck(array $arguments): int
+    {
+        return $this->runCommand($this->localPhpCommand(['scripts/acceptance-check.php', ...$arguments]));
     }
 
     /**
@@ -324,7 +338,7 @@ TEXT);
             return 1;
         }
 
-        return $this->runCommand($this->localPhpCommand(['scripts/docker-install.php', '--dry-run']));
+        return $this->runCommand($this->localPhpCommand(['scripts/docker-install.php', '--write-only']));
     }
 
     private function dockerUp(): int
@@ -336,6 +350,17 @@ TEXT);
         }
 
         return $this->runCommand($this->composeCommand(['up', '-d']));
+    }
+
+    private function prepareDockerRuntime(): int
+    {
+        $exitCode = $this->dockerSync();
+
+        if ($exitCode !== 0) {
+            return $exitCode;
+        }
+
+        return $this->dockerUp();
     }
 
     private function dockerDown(): int
@@ -569,6 +594,22 @@ TEXT);
         }
 
         return 0;
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function authTokenCreate(array $arguments): int
+    {
+        return $this->runRuntimePhpScript('scripts/auth-token-create.php', $arguments);
+    }
+
+    /**
+     * @param array<int, string> $arguments
+     */
+    private function mcpServe(array $arguments): int
+    {
+        return $this->runRuntimePhpScript('scripts/mcp-serve.php', $arguments);
     }
 
     /**

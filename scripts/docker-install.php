@@ -5,6 +5,7 @@ declare(strict_types=1);
 $rootPath = dirname(__DIR__);
 $envPath = $rootPath . DIRECTORY_SEPARATOR . '.env';
 $composePath = $rootPath . DIRECTORY_SEPARATOR . 'docker' . DIRECTORY_SEPARATOR . 'docker-compose.yml';
+const DOCKER_COMPOSE_EOL = "\n";
 
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     main($argv, $rootPath, $envPath, $composePath);
@@ -12,7 +13,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 
 function main(array $argv, string $rootPath, string $envPath, string $composePath): void
 {
-    $dryRun = in_array('--dry-run', $argv, true);
+    $writeOnly = in_array('--write-only', $argv, true) || in_array('--dry-run', $argv, true);
 
     ensureFileExists($envPath, '.env file not found.');
     ensureDirectoryExists(dirname($composePath), 'docker directory not found.');
@@ -21,18 +22,17 @@ function main(array $argv, string $rootPath, string $envPath, string $composePat
 
     $config = validateDatabaseConfig(parseEnvFile($envPath));
     $compose = buildDockerCompose($config);
+    $writeResult = writeDockerComposeFile($composePath, $compose);
 
-    file_put_contents($composePath, $compose);
-
-    output('docker/docker-compose.yml generated successfully.');
+    output(sprintf('docker/docker-compose.yml %s successfully.', $writeResult['status']));
     output(sprintf(
         'Database container configured for %s (%s).',
         $config['DB_DRIVER'],
         $config['DB_DATABASE']
     ));
 
-    if ($dryRun) {
-        output('Dry run enabled. Containers were not started.');
+    if ($writeOnly) {
+        output('Compose sync completed. Containers were not started.');
         return;
     }
 
@@ -173,8 +173,9 @@ function validateDatabaseConfig(array $config): array
 function buildDockerCompose(array $config): string
 {
     $databaseService = buildDatabaseService($config);
+    $databaseVolume = databaseVolumeName($config);
 
-    return implode(PHP_EOL, [
+    return implode(DOCKER_COMPOSE_EOL, [
         'services:',
         '  web:',
         '    image: nginx:1.27-alpine',
@@ -199,15 +200,43 @@ function buildDockerCompose(array $config): string
         '  db:',
         '    image: ' . $config['DB_IMAGE'],
         '    restart: unless-stopped',
+        '    ports:',
+        '      - "' . $config['DB_PORT'] . ':' . $config['DB_PORT'] . '"',
         '    environment:',
         $databaseService['environment'],
         '    volumes:',
-        '      - db_data:' . $config['DB_VOLUME_PATH'],
+        '      - ' . $databaseVolume . ':' . $config['DB_VOLUME_PATH'],
         '',
         'volumes:',
-        '  db_data:',
+        '  ' . $databaseVolume . ':',
         '',
     ]);
+}
+
+/**
+ * @return array{path: string, status: string}
+ */
+function writeDockerComposeFile(string $composePath, string $compose): array
+{
+    $normalizedCompose = str_replace(["\r\n", "\r"], DOCKER_COMPOSE_EOL, $compose);
+    $normalizedCompose = rtrim($normalizedCompose, DOCKER_COMPOSE_EOL) . DOCKER_COMPOSE_EOL;
+    $existing = is_file($composePath)
+        ? str_replace(["\r\n", "\r"], DOCKER_COMPOSE_EOL, (string) file_get_contents($composePath))
+        : null;
+
+    if ($existing === $normalizedCompose) {
+        return [
+            'path' => $composePath,
+            'status' => 'already synchronized',
+        ];
+    }
+
+    file_put_contents($composePath, $normalizedCompose);
+
+    return [
+        'path' => $composePath,
+        'status' => is_file($composePath) && $existing !== null ? 'synchronized' : 'generated',
+    ];
 }
 
 function buildDatabaseService(array $config): array
@@ -242,9 +271,12 @@ function yamlScalar(string $value): string
 
 function rootPassword(array $config): string
 {
-    return strtolower($config['DB_USERNAME']) === 'root'
-        ? $config['DB_PASSWORD']
-        : bin2hex(random_bytes(16));
+    return $config['DB_PASSWORD'];
+}
+
+function databaseVolumeName(array $config): string
+{
+    return sprintf('db_%s_data', $config['DB_DRIVER']);
 }
 
 function runCommand(string $command, string $errorMessage): void

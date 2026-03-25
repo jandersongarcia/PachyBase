@@ -64,7 +64,11 @@ final class PdoQueryExecutor implements QueryExecutorInterface
 
         try {
             $result = $callback($this);
-            $this->pdo->commit();
+
+            // Some drivers, notably MySQL around DDL, may auto-commit and end the transaction.
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
 
             return $result;
         } catch (Throwable $exception) {

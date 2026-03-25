@@ -48,6 +48,24 @@ class AiHttpKernelTest extends TestCase
         }
     }
 
+    public function testKernelPublishesAiSchemaJsonAlias(): void
+    {
+        ApiResponse::enableCapture();
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/ai-schema.json';
+
+        try {
+            (new HttpKernel(dirname(__DIR__, 2)))->handle();
+            $this->fail('Expected captured response.');
+        } catch (ResponseCaptured $captured) {
+            $payload = $captured->getPayload();
+
+            $this->assertSame(200, $captured->getStatusCode());
+            $this->assertSame('1.0', $payload['schema_version']);
+            $this->assertSame('/ai/entities', $payload['navigation']['entities_url']);
+        }
+    }
+
     public function testKernelPublishesAiEntityDocument(): void
     {
         ApiResponse::enableCapture();

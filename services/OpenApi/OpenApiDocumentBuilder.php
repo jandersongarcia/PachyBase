@@ -155,7 +155,7 @@ final class OpenApiDocumentBuilder
             [SystemController::class, 'status'] => [
                 'operationId' => 'systemStatus',
                 'summary' => 'Read runtime status',
-                'description' => 'Returns the current application status and, in non-production environments, extra request and database diagnostics.',
+                'description' => 'Returns the current application status without forcing a database round-trip on the critical path.',
                 'tags' => ['System'],
                 'responses' => [
                     '200' => $this->jsonResponse(
@@ -163,6 +163,43 @@ final class OpenApiDocumentBuilder
                         $this->successEnvelopeSchema(
                             ['$ref' => '#/components/schemas/SystemStatus'],
                             ['resource' => ['type' => 'string', 'example' => 'system.status']]
+                        )
+                    ),
+                ],
+            ],
+            [SystemController::class, 'health'] => [
+                'operationId' => 'systemHealth',
+                'summary' => 'Read lightweight health status',
+                'description' => 'Returns a cheap liveness/readiness-style health document without touching the database.',
+                'tags' => ['System'],
+                'responses' => [
+                    '200' => $this->jsonResponse(
+                        'Lightweight health status.',
+                        $this->successEnvelopeSchema(
+                            ['$ref' => '#/components/schemas/SystemHealth'],
+                            ['resource' => ['type' => 'string', 'example' => 'system.health']]
+                        )
+                    ),
+                ],
+            ],
+            [SystemController::class, 'deepHealth'] => [
+                'operationId' => 'systemDeepHealth',
+                'summary' => 'Read deep health status',
+                'description' => 'Returns the application health plus a database connectivity check for slower but more complete diagnostics.',
+                'tags' => ['System'],
+                'responses' => [
+                    '200' => $this->jsonResponse(
+                        'Deep health status.',
+                        $this->successEnvelopeSchema(
+                            ['$ref' => '#/components/schemas/SystemDeepHealth'],
+                            ['resource' => ['type' => 'string', 'example' => 'system.health.deep']]
+                        )
+                    ),
+                    '503' => $this->jsonResponse(
+                        'Deep health detected a degraded dependency.',
+                        $this->successEnvelopeSchema(
+                            ['$ref' => '#/components/schemas/SystemDeepHealth'],
+                            ['resource' => ['type' => 'string', 'example' => 'system.health.deep']]
                         )
                     ),
                 ],
@@ -194,6 +231,30 @@ final class OpenApiDocumentBuilder
                 'operationId' => 'aiSchemaDocument',
                 'summary' => 'Read the AI-friendly schema document',
                 'description' => 'Publishes a machine-oriented schema view that summarizes entities, fields, writable rules, filters, pagination, operations, and OpenAPI compatibility.',
+                'tags' => ['Documentation'],
+                'responses' => [
+                    '200' => $this->jsonResponse(
+                        'AI-friendly schema document.',
+                        [
+                            'type' => 'object',
+                            'required' => ['schema_version', 'generated_at', 'navigation', 'openapi_compatibility', 'entities'],
+                            'properties' => [
+                                'schema_version' => ['type' => 'string', 'example' => '1.0'],
+                                'generated_at' => ['type' => 'string', 'format' => 'date-time'],
+                                'generator' => ['type' => 'object', 'additionalProperties' => true],
+                                'navigation' => ['type' => 'object', 'additionalProperties' => true],
+                                'openapi_compatibility' => ['type' => 'object', 'additionalProperties' => true],
+                                'entities' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                            ],
+                            'additionalProperties' => true,
+                        ]
+                    ),
+                ],
+            ],
+            [AiController::class, 'schemaFile'] => [
+                'operationId' => 'aiSchemaFileDocument',
+                'summary' => 'Read the AI-friendly schema file',
+                'description' => 'Publishes the AI-oriented schema using the static file-oriented path that production runtimes can serve directly.',
                 'tags' => ['Documentation'],
                 'responses' => [
                     '200' => $this->jsonResponse(
@@ -435,7 +496,7 @@ final class OpenApiDocumentBuilder
         return [
             'operationId' => 'list' . $this->studly($resource->slug),
             'summary' => sprintf('List %s', $this->humanPlural($resource->slug)),
-            'description' => $this->crudIndexDescription($resource),
+            'description' => $this->crudIndexDescription($resource, $entity),
             'tags' => [$tagName],
             'security' => [['bearerAuth' => []]],
             'parameters' => $this->crudIndexParameters($resource, $entity),
@@ -838,34 +899,37 @@ final class OpenApiDocumentBuilder
             ],
         ];
 
-        if ($resource->searchableFields !== []) {
+        $searchableFields = $this->searchableFields($resource, $entity);
+        if ($searchableFields !== []) {
             $parameters[] = [
                 'name' => 'search',
                 'in' => 'query',
                 'required' => false,
-                'description' => 'Case-insensitive text search over: ' . implode(', ', $resource->searchableFields) . '.',
+                'description' => 'Case-insensitive text search over: ' . implode(', ', $searchableFields) . '.',
                 'schema' => ['type' => 'string'],
             ];
         }
 
-        if ($resource->sortableFields !== []) {
+        $sortableFields = $this->sortableFields($resource, $entity);
+        if ($sortableFields !== []) {
             $parameters[] = [
                 'name' => 'sort',
                 'in' => 'query',
                 'required' => false,
-                'description' => 'Comma-separated sortable fields. Prefix a field with "-" for descending order. Allowed values: ' . implode(', ', $resource->sortableFields) . '.',
+                'description' => 'Comma-separated sortable fields. Prefix a field with "-" for descending order. Allowed values: ' . implode(', ', $sortableFields) . '.',
                 'schema' => ['type' => 'string'],
             ];
         }
 
-        if ($resource->filterableFields !== []) {
+        $filterableFields = $this->filterableFields($resource, $entity);
+        if ($filterableFields !== []) {
             $filterProperties = [];
 
-            foreach ($resource->filterableFields as $fieldName) {
+            foreach ($filterableFields as $fieldName) {
                 $field = $entity->field($fieldName);
 
                 if ($field instanceof FieldDefinition) {
-                    $filterProperties[$fieldName] = $this->fieldSchema($field, $resource->rulesFor($fieldName), true);
+                    $filterProperties[$fieldName] = $this->filterFieldSchema($field, $resource->rulesFor($fieldName));
                 }
             }
 
@@ -873,7 +937,7 @@ final class OpenApiDocumentBuilder
                 'name' => 'filter',
                 'in' => 'query',
                 'required' => false,
-                'description' => 'Field/value filters encoded as query parameters like filter[field]=value.',
+                'description' => 'Field/value filters encoded as query parameters like filter[field]=value or filter[field][operator]=value. Supported operators depend on the field type and include eq, ne, gt, gte, lt, lte, in, contains, and null.',
                 'style' => 'deepObject',
                 'explode' => true,
                 'schema' => [
@@ -907,7 +971,7 @@ final class OpenApiDocumentBuilder
         ];
     }
 
-    private function crudIndexDescription(CrudEntity $resource): string
+    private function crudIndexDescription(CrudEntity $resource, EntityDefinition $entity): string
     {
         $lines = [
             sprintf('Lists records from the "%s" entity.', $resource->slug),
@@ -915,19 +979,125 @@ final class OpenApiDocumentBuilder
             sprintf('Required scopes: crud:read or entity:%s:read.', $resource->slug),
         ];
 
-        if ($resource->searchableFields !== []) {
-            $lines[] = 'Searchable fields: ' . implode(', ', $resource->searchableFields) . '.';
+        $searchableFields = $this->searchableFields($resource, $entity);
+        if ($searchableFields !== []) {
+            $lines[] = 'Searchable fields: ' . implode(', ', $searchableFields) . '.';
         }
 
-        if ($resource->filterableFields !== []) {
-            $lines[] = 'Filterable fields: ' . implode(', ', $resource->filterableFields) . '.';
+        $filterableFields = $this->filterableFields($resource, $entity);
+        if ($filterableFields !== []) {
+            $lines[] = 'Filterable fields: ' . implode(', ', $filterableFields) . '.';
+            $lines[] = 'Filter operators: eq, ne, gt, gte, lt, lte, in, contains, null.';
         }
 
-        if ($resource->sortableFields !== []) {
-            $lines[] = 'Sortable fields: ' . implode(', ', $resource->sortableFields) . '.';
+        $sortableFields = $this->sortableFields($resource, $entity);
+        if ($sortableFields !== []) {
+            $lines[] = 'Sortable fields: ' . implode(', ', $sortableFields) . '.';
         }
 
         return implode("\n\n", $lines);
+    }
+
+    /**
+     * @param array<string, mixed> $rules
+     * @return array<string, mixed>
+     */
+    private function filterFieldSchema(FieldDefinition $field, array $rules): array
+    {
+        $scalarSchema = $this->fieldSchema($field, $rules, true);
+        $operatorProperties = [
+            'eq' => $scalarSchema,
+            'ne' => $scalarSchema,
+            'in' => [
+                'type' => 'string',
+                'description' => 'Comma-separated values.',
+            ],
+            'null' => [
+                'type' => 'boolean',
+                'description' => 'true for IS NULL, false for IS NOT NULL.',
+            ],
+        ];
+
+        if (in_array($field->type, ['integer', 'bigint', 'decimal', 'float', 'date', 'datetime', 'time'], true)) {
+            $operatorProperties['gt'] = $scalarSchema;
+            $operatorProperties['gte'] = $scalarSchema;
+            $operatorProperties['lt'] = $scalarSchema;
+            $operatorProperties['lte'] = $scalarSchema;
+        }
+
+        if (in_array($field->type, ['string', 'text'], true)) {
+            $operatorProperties['contains'] = [
+                'type' => 'string',
+                'description' => 'Case-insensitive partial match.',
+            ];
+        }
+
+        return [
+            'oneOf' => [
+                $scalarSchema,
+                [
+                    'type' => 'object',
+                    'properties' => $operatorProperties,
+                    'additionalProperties' => false,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function filterableFields(CrudEntity $resource, ?EntityDefinition $entity = null): array
+    {
+        if ($resource->filterableFields !== []) {
+            return $resource->filterableFields;
+        }
+
+        if (!$entity instanceof EntityDefinition) {
+            return [];
+        }
+
+        return array_map(static fn(FieldDefinition $field): string => $field->name, $entity->fields);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function sortableFields(CrudEntity $resource, ?EntityDefinition $entity = null): array
+    {
+        if ($resource->sortableFields !== []) {
+            return $resource->sortableFields;
+        }
+
+        if (!$entity instanceof EntityDefinition) {
+            return [];
+        }
+
+        return array_map(static fn(FieldDefinition $field): string => $field->name, $entity->fields);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function searchableFields(CrudEntity $resource, ?EntityDefinition $entity = null): array
+    {
+        if ($resource->searchableFields !== []) {
+            return $resource->searchableFields;
+        }
+
+        if (!$entity instanceof EntityDefinition) {
+            return [];
+        }
+
+        $fields = [];
+
+        foreach ($entity->fields as $field) {
+            if (in_array($field->type, ['string', 'text'], true)) {
+                $fields[] = $field->name;
+            }
+        }
+
+        return $fields;
     }
 
     private function isRequiredForOperation(CrudEntity $resource, FieldDefinition $field, string $operation): bool
@@ -1139,13 +1309,72 @@ final class OpenApiDocumentBuilder
                         'status' => ['type' => 'string', 'example' => 'running'],
                         'version' => ['type' => 'string', 'example' => '1.0.0'],
                         'environment' => ['type' => 'string', 'nullable' => true],
-                        'database' => [
+                        'request' => [
                             'type' => 'object',
                             'nullable' => true,
                             'properties' => [
-                                'driver' => ['type' => 'string', 'nullable' => true],
-                                'connected' => ['type' => 'boolean'],
-                                'adapter' => ['type' => 'string', 'nullable' => true],
+                                'method' => ['type' => 'string'],
+                                'path' => ['type' => 'string'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'SystemHealthCheck' => [
+                    'type' => 'object',
+                    'required' => ['status'],
+                    'properties' => [
+                        'status' => ['type' => 'string', 'example' => 'ok'],
+                        'driver' => ['type' => 'string', 'nullable' => true],
+                        'connected' => ['type' => 'boolean', 'nullable' => true],
+                        'adapter' => ['type' => 'string', 'nullable' => true],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'SystemHealth' => [
+                    'type' => 'object',
+                    'required' => ['name', 'status', 'version', 'checks'],
+                    'properties' => [
+                        'name' => ['type' => 'string'],
+                        'status' => ['type' => 'string', 'example' => 'ok'],
+                        'version' => ['type' => 'string', 'example' => '1.0.0'],
+                        'environment' => ['type' => 'string', 'nullable' => true],
+                        'checks' => [
+                            'type' => 'object',
+                            'required' => ['application'],
+                            'properties' => [
+                                'application' => ['$ref' => '#/components/schemas/SystemHealthCheck'],
+                                'database' => ['$ref' => '#/components/schemas/SystemHealthCheck'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                        'request' => [
+                            'type' => 'object',
+                            'nullable' => true,
+                            'properties' => [
+                                'method' => ['type' => 'string'],
+                                'path' => ['type' => 'string'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'SystemDeepHealth' => [
+                    'type' => 'object',
+                    'required' => ['name', 'status', 'version', 'checks'],
+                    'properties' => [
+                        'name' => ['type' => 'string'],
+                        'status' => ['type' => 'string', 'example' => 'ok'],
+                        'version' => ['type' => 'string', 'example' => '1.0.0'],
+                        'environment' => ['type' => 'string', 'nullable' => true],
+                        'checks' => [
+                            'type' => 'object',
+                            'required' => ['application', 'database'],
+                            'properties' => [
+                                'application' => ['$ref' => '#/components/schemas/SystemHealthCheck'],
+                                'database' => ['$ref' => '#/components/schemas/SystemHealthCheck'],
                             ],
                             'additionalProperties' => false,
                         ],

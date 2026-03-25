@@ -12,5 +12,7 @@ final class SystemModule
     public function register(Router $router): void
     {
         $router->get('/', [SystemController::class, 'status']);
+        $router->get('/health', [SystemController::class, 'health']);
+        $router->get('/health/deep', [SystemController::class, 'deepHealth']);
     }
 }

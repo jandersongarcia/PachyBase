@@ -9,11 +9,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev \
     unzip \
     zip \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo_pgsql \
+    && docker-php-ext-install opcache pdo_mysql mbstring exif pcntl bcmath gd pdo_pgsql \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/php/conf.d/*.ini /usr/local/etc/php/conf.d/
+COPY docker/php-fpm.d/*.conf /usr/local/etc/php-fpm.d/
 
 WORKDIR /var/www/html
 

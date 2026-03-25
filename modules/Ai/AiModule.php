@@ -12,6 +12,7 @@ final class AiModule
     public function register(Router $router): void
     {
         $router->get('/ai/schema', [AiController::class, 'schema']);
+        $router->get('/ai-schema.json', [AiController::class, 'schemaFile']);
         $router->get('/ai/entities', [AiController::class, 'entities']);
         $router->get('/ai/entity/{name}', [AiController::class, 'entity']);
     }

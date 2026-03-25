@@ -1,23 +1,22 @@
 # Release Notes
 
-## PachyBase 1.0.0-rc.1
+## PachyBase 1.0.0-rc.2
 
-This release candidate focuses on hardening rather than feature expansion. The goal is to make a fresh clone feel predictable for third parties, with fewer hidden assumptions around Docker, environment variables, release metadata, and operational checks.
+This release candidate closes the critical installation and runtime gaps that were still visible in clean environments. The focus is deterministic Docker bootstrap, lower-overhead production serving for generated contracts, and a tighter baseline for PHP runtime behavior.
 
 ### Highlights
 
-- Release metadata is now centralized and exposed consistently through the runtime and OpenAPI document.
-- The project CLI now includes `version` and `doctor`, while preserving legacy aliases such as `release:check`.
-- Docker assets were reviewed to remove surprise-prone defaults such as unpinned tags and published database ports.
-- The repository now includes first-class release documentation for publishing and verification.
-- Source archives now exclude `docs-site/`, and the root project docs now point to the published documentation site.
-- The documented install flows now match the actual CLI behavior for both `APP_RUNTIME=docker` and `APP_RUNTIME=local`.
+- Production can now serve `openapi.json` and `ai-schema.json` directly from generated static artifacts, with lightweight runtime fallbacks.
+- Health checks are split between a cheap `/health` probe and `/health/deep` for readiness checks that include database access.
+- The Docker CLI flow now keeps `install`, `start`, and `compose-sync` consistent, and generated `docker-compose.yml` output is deterministic.
+- PHP runtime defaults now enable OPcache, add PHP-FPM tuning, and preserve metadata cache integrity under concurrent access.
+- Clean bootstrap was exercised in isolated MySQL and PostgreSQL environments and now completes successfully for both drivers.
 
 ### Upgrade notes
 
 - Run `./pachybase doctor` after updating to confirm `.env`, auth, and Docker posture are still valid.
-- Regenerate the Compose file after updating Docker assets: `./pachybase docker:sync`.
-- If you rely on the generated Compose file, regenerate it from your local `.env` so the selected database driver stays aligned.
+- Regenerate the Compose file after updating Docker assets: `./pachybase compose-sync`.
+- If you probe service health from an orchestrator, use `/health` for liveness and `/health/deep` only where database readiness is required.
 - Prefer the canonical command names `env:sync`, `docker:sync`, and `openapi:build`; the older aliases still work but are no longer the primary documentation surface.
 
 ### Validation summary
