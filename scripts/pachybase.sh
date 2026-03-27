@@ -65,6 +65,34 @@ run_container_php_script() {
   docker_compose run --rm php php "$@"
 }
 
+has_argument_prefix() {
+  local prefix="$1"
+  shift || true
+
+  for argument in "$@"; do
+    [[ "$argument" == "$prefix"* ]] && return 0
+  done
+
+  return 1
+}
+
+run_container_runtime_probe() {
+  local script_path="$1"
+  local base_url_env_name="$2"
+  shift 2 || true
+
+  local args=("$@")
+  local configured_base_url="${!base_url_env_name:-}"
+
+  if ! has_argument_prefix "--base-url=" "${args[@]}"; then
+    if [[ -z "$configured_base_url" ]]; then
+      args+=("--base-url=http://web")
+    fi
+  fi
+
+  run_container_php_script "$script_path" "${args[@]}"
+}
+
 print_help() {
   cat <<'EOF'
 PachyBase CLI
@@ -149,6 +177,15 @@ case "$COMMAND" in
     ;;
   doctor|release:check)
     run_container_php_script scripts/doctor.php "$@"
+    ;;
+  acceptance:check)
+    run_container_runtime_probe scripts/acceptance-check.php PACHYBASE_ACCEPTANCE_BASE_URL "$@"
+    ;;
+  http:smoke)
+    run_container_runtime_probe scripts/http-smoke.php PACHYBASE_SMOKE_BASE_URL "$@"
+    ;;
+  benchmark:local)
+    run_container_runtime_probe scripts/benchmark-local.php PACHYBASE_BENCHMARK_BASE_URL "$@"
     ;;
   status)
     run_container_php_script scripts/status.php --inside-docker "$@"

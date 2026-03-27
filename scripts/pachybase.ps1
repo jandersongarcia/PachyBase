@@ -98,6 +98,41 @@ function Invoke-ContainerPhpScript {
     Invoke-DockerCompose -ComposeArguments (@("run", "--rm", "php", "php") + $ScriptArguments)
 }
 
+function Test-HasArgumentPrefix {
+    param(
+        [string[]] $InputArguments,
+        [string] $Prefix
+    )
+
+    foreach ($argument in $InputArguments) {
+        if ($argument.StartsWith($Prefix)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Invoke-ContainerRuntimeProbe {
+    param(
+        [string] $ScriptPath,
+        [string] $BaseUrlEnvironmentName,
+        [string[]] $ScriptArguments
+    )
+
+    $resolvedArguments = @($ScriptArguments)
+    $configuredBaseUrl = [Environment]::GetEnvironmentVariable($BaseUrlEnvironmentName)
+
+    if (
+        -not (Test-HasArgumentPrefix -InputArguments $resolvedArguments -Prefix "--base-url=") `
+        -and [string]::IsNullOrWhiteSpace($configuredBaseUrl)
+    ) {
+        $resolvedArguments += "--base-url=http://web"
+    }
+
+    Invoke-ContainerPhpScript -ScriptArguments (@($ScriptPath) + $resolvedArguments)
+}
+
 function Show-Help {
 @'
 PachyBase CLI
@@ -181,6 +216,9 @@ switch ($command) {
     }
     "doctor" { Invoke-ContainerPhpScript -ScriptArguments (@("scripts/doctor.php") + $rest) }
     "release:check" { Invoke-ContainerPhpScript -ScriptArguments (@("scripts/doctor.php") + $rest) }
+    "acceptance:check" { Invoke-ContainerRuntimeProbe -ScriptPath "scripts/acceptance-check.php" -BaseUrlEnvironmentName "PACHYBASE_ACCEPTANCE_BASE_URL" -ScriptArguments $rest }
+    "http:smoke" { Invoke-ContainerRuntimeProbe -ScriptPath "scripts/http-smoke.php" -BaseUrlEnvironmentName "PACHYBASE_SMOKE_BASE_URL" -ScriptArguments $rest }
+    "benchmark:local" { Invoke-ContainerRuntimeProbe -ScriptPath "scripts/benchmark-local.php" -BaseUrlEnvironmentName "PACHYBASE_BENCHMARK_BASE_URL" -ScriptArguments $rest }
     "status" { Invoke-ContainerPhpScript -ScriptArguments (@("scripts/status.php", "--inside-docker") + $rest) }
     "db:setup" { Invoke-ContainerPhpScript -ScriptArguments (@("scripts/bootstrap-database.php", "--skip-seeds") + $rest) }
     "db:migrate" { Invoke-ContainerPhpScript -ScriptArguments (@("scripts/migrate.php", "up") + $rest) }
