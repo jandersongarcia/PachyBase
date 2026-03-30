@@ -2,6 +2,31 @@
 
 All notable changes to PachyBase will be documented in this file.
 
+## [1.0.0-rc.4] - 2026-03-30
+
+### Added
+
+- Public `.ai-skills/` directory with starter skills for architecture, CRUD workflows, runtime verification, and MCP-driven agent integrations.
+
+### Changed
+
+- README and agent-template documentation now point agents to `.ai-skills/` as the project-specific customization surface.
+- Docker Compose generation now assigns container names derived from `APP_NAME` for the `web`, `php`, and `db` services.
+- Repository ignore rules now exclude local `.agents/` workspace state from release-oriented Git status output.
+
+### Fixed
+
+- Root documentation now points the contribution guide to the published docs site instead of the removed top-level `CONTRIBUTING.md`.
+- Docker installation docs and PowerShell setup messaging no longer reference the removed `install.bat` wrapper.
+
+### Verified
+
+- Release doctor passed with `19` checks and `0` warnings.
+- Acceptance smoke check passed with `5` checks and `1` warning for the intentionally skipped protected CRUD token.
+- OpenAPI build generated `18` paths and `29` schemas.
+- AI schema build generated `2` exposed entities.
+- Active PostgreSQL runtime was migrated and seeded before the full containerized PHPUnit suite passed: `161 tests`, `703 assertions`.
+
 ## [1.0.0-rc.3] - 2026-03-25
 
 ### Added

@@ -15,6 +15,7 @@ composer.phar
 # IDE and Editors
 /.idea/
 /.vscode/
+/.agents/
 /build/
 *.swp
 *.swo

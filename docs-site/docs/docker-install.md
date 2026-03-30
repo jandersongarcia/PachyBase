@@ -66,7 +66,7 @@ The generated Compose file also publishes the database port on the host (`3306` 
 
 ## Legacy setup wrappers
 
-`install.sh` and `install.bat` remain available when you explicitly want the lower-level Docker setup wrappers. They still build the PHP image, install Composer dependencies in the container, generate `docker/docker-compose.yml`, start the stack, and bootstrap the database, but the CLI remains the canonical documented entrypoint.
+`install.sh` and `scripts/setup.ps1` remain available when you explicitly want the lower-level Docker setup wrappers. They still build the PHP image, install Composer dependencies in the container, generate `docker/docker-compose.yml`, start the stack, and bootstrap the database, but the CLI remains the canonical documented entrypoint.
 
 ## Why this is the primary track
 

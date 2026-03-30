@@ -64,7 +64,7 @@ O Compose gerado tambem publica a porta do banco no host (`3306` para MySQL ou `
 
 ## Wrappers legados de setup
 
-`install.sh` e `install.bat` continuam disponiveis quando voce quer chamar os wrappers de setup Docker diretamente. Eles ainda fazem o build da imagem PHP, instalam dependencias Composer no container, geram `docker/docker-compose.yml`, sobem a stack e fazem bootstrap do banco, mas a CLI continua sendo o entrypoint canonico da documentacao.
+`install.sh` e `scripts/setup.ps1` continuam disponiveis quando voce quer chamar os wrappers de setup Docker diretamente. Eles ainda fazem o build da imagem PHP, instalam dependencias Composer no container, geram `docker/docker-compose.yml`, sobem a stack e fazem bootstrap do banco, mas a CLI continua sendo o entrypoint canonico da documentacao.
 
 ## Por que essa e a trilha principal
 

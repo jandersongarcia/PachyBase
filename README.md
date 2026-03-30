@@ -2,7 +2,7 @@
 
 PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
 
-Current stage: release candidate `1.0.0-rc.3`
+Current stage: release candidate `1.0.0-rc.4`
 
 ## Quick start (Docker)
 
@@ -48,6 +48,7 @@ Documentation entry points:
 - Install overview: <https://jandersongarcia.github.io/pachybase/install>
 - Install with Docker: <https://jandersongarcia.github.io/pachybase/docker-install>
 - Local installation: <https://jandersongarcia.github.io/pachybase/local-install>
+- AI Skills: [.ai-skills/](.ai-skills/) directory with project-specific skills for agents
 
 ## What is included today
 
@@ -289,6 +290,19 @@ Optional user binding:
 ./pachybase auth:token:create "Claude Agent" --scope=crud:read --user-email=admin@pachybase.local
 ```
 
+## AI Skills
+
+PachyBase ships a public [`.ai-skills/`](.ai-skills/) directory with small, composable skills for AI agents that work on the project.
+
+Included starting points:
+
+- `.ai-skills/pachybase-architecture.md`
+- `.ai-skills/pachybase-crud-workflow.md`
+- `.ai-skills/pachybase-runtime-checks.md`
+- `.ai-skills/pachybase-mcp-agent.md`
+
+Use these files to help an agent load the right project conventions before changing code, generating docs, or connecting to a live PachyBase runtime.
+
 ## CLI
 
 Lifecycle:
@@ -377,6 +391,7 @@ Recommended entry points:
 - [Filters and Pagination](https://jandersongarcia.github.io/pachybase/filters-pagination)
 - [OpenAPI](https://jandersongarcia.github.io/pachybase/openapi)
 - [AI Endpoints](https://jandersongarcia.github.io/pachybase/ai-endpoints)
+- [MCP Adapter](https://jandersongarcia.github.io/pachybase/mcp)
 - [BaaS Platform](https://jandersongarcia.github.io/pachybase/baas-platform)
 - [CLI](https://jandersongarcia.github.io/pachybase/cli)
 - [Production Deploy](https://jandersongarcia.github.io/pachybase/production-deploy)
@@ -418,7 +433,7 @@ Release readiness check:
 
 ## Contributing and roadmap
 
-- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Contribution guide: [Contributing](https://jandersongarcia.github.io/pachybase/contributing)
 - Roadmap: [ROADMAP.md](ROADMAP.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Release notes: [RELEASE_NOTES.md](RELEASE_NOTES.md)

@@ -34,7 +34,7 @@ function Assert-Command {
 
     $null = & $Command @Arguments 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Fail "$Label is required to run install.bat."
+        Fail "$Label is required to run scripts/setup.ps1."
     }
 }
 
@@ -84,6 +84,19 @@ function Get-ConfigValue {
     return $Default
 }
 
+function Get-ContainerNamePrefix {
+    param([hashtable] $Config)
+
+    $appName = (Get-ConfigValue -Config $Config -Key "APP_NAME" -Default "pachybase").ToLowerInvariant()
+    $normalized = [System.Text.RegularExpressions.Regex]::Replace($appName, '[^a-z0-9_.-]+', '-').Trim('-')
+
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return "pachybase"
+    }
+
+    return $normalized
+}
+
 function Validate-DatabaseConfig {
     param([hashtable] $Config)
 
@@ -126,7 +139,7 @@ function Validate-DatabaseConfig {
     }
 
     if ($resolved["DB_HOST"] -ne $supported[$driver].Host) {
-        Fail "DB_HOST must be `"$($supported[$driver].Host)`" when using install.bat."
+        Fail "DB_HOST must be `"$($supported[$driver].Host)`" when using scripts/setup.ps1."
     }
 
     if ($resolved["DB_PORT"] -ne $supported[$driver].Port) {
@@ -171,10 +184,12 @@ function Write-DockerComposeFile {
 
     $databaseEnvironment = Get-DatabaseEnvironmentLines -Config $Config
     $databaseVolume = Get-DatabaseVolumeName -Config $Config
+    $containerPrefix = Get-ContainerNamePrefix -Config $Config
     $compose = @(
         'services:',
         '  web:',
         '    image: nginx:1.27-alpine',
+        "    container_name: ${containerPrefix}-web",
         '    ports:',
         '      - "8080:80"',
         '    volumes:',
@@ -187,6 +202,7 @@ function Write-DockerComposeFile {
         '    build:',
         '      context: ..',
         '      dockerfile: docker/Dockerfile',
+        "    container_name: ${containerPrefix}-php",
         '    working_dir: /var/www/html',
         '    volumes:',
         '      - ../:/var/www/html',
@@ -195,6 +211,7 @@ function Write-DockerComposeFile {
         '',
         '  db:',
         "    image: $($Config["DB_IMAGE"])",
+        "    container_name: ${containerPrefix}-db",
         '    restart: unless-stopped',
         '    ports:',
         "      - `"$($Config["DB_PORT"]):$($Config["DB_PORT"])`"",
@@ -247,7 +264,7 @@ if (-not (Test-Path $envPath)) {
         Fail ".env.example not found."
     }
 
-    Fail "Create .env from .env.example and configure DB_DRIVER, DB_DATABASE, DB_USERNAME, and DB_PASSWORD before running install.bat."
+    Fail "Create .env from .env.example and configure DB_DRIVER, DB_DATABASE, DB_USERNAME, and DB_PASSWORD before running scripts/setup.ps1."
 }
 
 Write-Step "Reading project configuration"

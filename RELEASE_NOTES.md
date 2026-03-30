@@ -1,5 +1,30 @@
 # Release Notes
 
+## PachyBase 1.0.0-rc.4
+
+This release candidate closes a set of release-preparation gaps around agent onboarding, Docker ergonomics, and public documentation consistency. The focus is making PachyBase easier to hand to third-party agents and contributors without leaking local-only scaffolding or leaving stale setup references behind.
+
+### Highlights
+
+- PachyBase now ships a public `.ai-skills/` directory with starter skills for architecture, CRUD workflows, runtime checks, and MCP-based agent integration.
+- The README and agent-template docs now explain how agents should use `.ai-skills/` instead of relying on private local scaffolding.
+- Generated Docker Compose services now receive deterministic container names based on `APP_NAME`.
+- Public release-facing docs now avoid broken links to the removed root `CONTRIBUTING.md` and the removed `install.bat` wrapper.
+
+### Upgrade notes
+
+- If you maintain agent onboarding material outside the repository, update any `skills/` references to `.ai-skills/`.
+- Regenerate `docker/docker-compose.yml` after updating if you want the new container names to appear in local Docker tooling.
+- If your Windows setup instructions still mention `install.bat`, switch them to `.\pachybase.bat install` or `scripts/setup.ps1` for lower-level Docker setup.
+
+### Validation summary
+
+- `./pachybase doctor` passed with `19` checks and no warnings.
+- `./pachybase acceptance:check` passed for OpenAPI, AI discovery, and MCP smoke flows, with one expected warning because no protected CRUD acceptance token was provided.
+- `./pachybase openapi:build` generated `build/openapi.json` with `18` paths and `29` schemas.
+- `./pachybase ai:build` generated `build/ai-schema.json` with `2` exposed entities.
+- After running `./pachybase db:migrate` and `./pachybase db:seed` on the active PostgreSQL runtime, the full test suite passed: `161 tests`, `703 assertions`.
+
 ## PachyBase 1.0.0-rc.3
 
 This release candidate turns PachyBase into a minimal but usable BaaS foundation. The focus is fast project onboarding, operator-grade backup and secret management, tenant-level jobs and storage primitives, and enough documentation for a third party to adopt the platform without manual hand-holding.

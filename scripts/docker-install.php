@@ -174,11 +174,13 @@ function buildDockerCompose(array $config): string
 {
     $databaseService = buildDatabaseService($config);
     $databaseVolume = databaseVolumeName($config);
+    $containerPrefix = containerNamePrefix($config);
 
     return implode(DOCKER_COMPOSE_EOL, [
         'services:',
         '  web:',
         '    image: nginx:1.27-alpine',
+        '    container_name: ' . $containerPrefix . '-web',
         '    ports:',
         '      - "8080:80"',
         '    volumes:',
@@ -191,6 +193,7 @@ function buildDockerCompose(array $config): string
         '    build:',
         '      context: ..',
         '      dockerfile: docker/Dockerfile',
+        '    container_name: ' . $containerPrefix . '-php',
         '    working_dir: /var/www/html',
         '    volumes:',
         '      - ../:/var/www/html',
@@ -199,6 +202,7 @@ function buildDockerCompose(array $config): string
         '',
         '  db:',
         '    image: ' . $config['DB_IMAGE'],
+        '    container_name: ' . $containerPrefix . '-db',
         '    restart: unless-stopped',
         '    ports:',
         '      - "' . $config['DB_PORT'] . ':' . $config['DB_PORT'] . '"',
@@ -277,6 +281,19 @@ function rootPassword(array $config): string
 function databaseVolumeName(array $config): string
 {
     return sprintf('db_%s_data', $config['DB_DRIVER']);
+}
+
+function containerNamePrefix(array $config): string
+{
+    $appName = strtolower(trim((string) ($config['APP_NAME'] ?? 'pachybase')));
+    $normalized = preg_replace('/[^a-z0-9_.-]+/', '-', $appName);
+    $normalized = trim((string) $normalized, '-');
+
+    if ($normalized === '') {
+        return 'pachybase';
+    }
+
+    return $normalized;
 }
 
 function runCommand(string $command, string $errorMessage): void

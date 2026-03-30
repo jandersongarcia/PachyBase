@@ -102,6 +102,7 @@ validate_database_config() {
 write_docker_compose_file() {
   local db_environment
   local db_volume_name="db_${DB_DRIVER}_data"
+  local APP_NAME="$(get_config_value APP_NAME "PachyBase")"
 
   if [[ "$DB_DRIVER" == "mysql" ]]; then
     db_environment=$(cat <<EOF
@@ -127,6 +128,7 @@ EOF
 services:
   web:
     image: nginx:1.27-alpine
+    container_name: ${APP_NAME}-web
     ports:
       - "8080:80"
     volumes:
@@ -139,6 +141,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    container_name: ${APP_NAME}-php
     working_dir: /var/www/html
     volumes:
       - ../:/var/www/html
@@ -147,6 +150,7 @@ services:
 
   db:
     image: $DB_IMAGE
+    container_name: ${APP_NAME}-db
     restart: unless-stopped
     ports:
       - "$DB_PORT:$DB_PORT"
