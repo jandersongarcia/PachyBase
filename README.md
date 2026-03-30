@@ -45,9 +45,9 @@ PachyBase documents two official installation paths:
 
 Documentation entry points:
 
-- Install overview: <https://jandersongarcia.github.io/pachybase/install>
-- Install with Docker: <https://jandersongarcia.github.io/pachybase/docker-install>
-- Local installation: <https://jandersongarcia.github.io/pachybase/local-install>
+- Install overview: <https://jandersongarcia.github.io/PachyBase/install>
+- Install with Docker: <https://jandersongarcia.github.io/PachyBase/docker-install>
+- Local installation: <https://jandersongarcia.github.io/PachyBase/local-install>
 - AI Skills: [.ai-skills/](.ai-skills/) directory with project-specific skills for agents
 
 ## What is included today
@@ -372,34 +372,34 @@ Legacy aliases such as `env:init`, `docker:install`, `release:check`, and `opena
 
 Published docs:
 
-- English: <https://jandersongarcia.github.io/pachybase/>
-- Portuguese: <https://jandersongarcia.github.io/pachybase/pt-BR/>
+- English: <https://jandersongarcia.github.io/PachyBase/>
+- Portuguese: <https://jandersongarcia.github.io/PachyBase/pt-BR/>
 
 The `docs-site/` workspace remains in the Git repository for documentation authoring, but it is excluded from release archives to keep the distributed package focused on the runtime.
 
 Recommended entry points:
 
-- [Overview](https://jandersongarcia.github.io/pachybase/)
-- [Install](https://jandersongarcia.github.io/pachybase/install)
-- [Install with Docker](https://jandersongarcia.github.io/pachybase/docker-install)
-- [Local Installation](https://jandersongarcia.github.io/pachybase/local-install)
-- [Configuration](https://jandersongarcia.github.io/pachybase/configuration)
-- [Supported Databases](https://jandersongarcia.github.io/pachybase/supported-databases)
-- [API Contract](https://jandersongarcia.github.io/pachybase/api-contract)
-- [Authentication and Authorization](https://jandersongarcia.github.io/pachybase/auth-security)
-- [Automatic CRUD](https://jandersongarcia.github.io/pachybase/automatic-crud)
-- [Filters and Pagination](https://jandersongarcia.github.io/pachybase/filters-pagination)
-- [OpenAPI](https://jandersongarcia.github.io/pachybase/openapi)
-- [AI Endpoints](https://jandersongarcia.github.io/pachybase/ai-endpoints)
-- [MCP Adapter](https://jandersongarcia.github.io/pachybase/mcp)
-- [BaaS Platform](https://jandersongarcia.github.io/pachybase/baas-platform)
-- [CLI](https://jandersongarcia.github.io/pachybase/cli)
-- [Production Deploy](https://jandersongarcia.github.io/pachybase/production-deploy)
-- [Agent Templates](https://jandersongarcia.github.io/pachybase/agent-templates)
-- [Contributing](https://jandersongarcia.github.io/pachybase/contributing)
-- [Roadmap](https://jandersongarcia.github.io/pachybase/roadmap)
-- [Examples](https://jandersongarcia.github.io/pachybase/examples)
-- [Release Process](https://jandersongarcia.github.io/pachybase/release-process)
+- [Overview](https://jandersongarcia.github.io/PachyBase/)
+- [Install](https://jandersongarcia.github.io/PachyBase/install)
+- [Install with Docker](https://jandersongarcia.github.io/PachyBase/docker-install)
+- [Local Installation](https://jandersongarcia.github.io/PachyBase/local-install)
+- [Configuration](https://jandersongarcia.github.io/PachyBase/configuration)
+- [Supported Databases](https://jandersongarcia.github.io/PachyBase/supported-databases)
+- [API Contract](https://jandersongarcia.github.io/PachyBase/api-contract)
+- [Authentication and Authorization](https://jandersongarcia.github.io/PachyBase/auth-security)
+- [Automatic CRUD](https://jandersongarcia.github.io/PachyBase/automatic-crud)
+- [Filters and Pagination](https://jandersongarcia.github.io/PachyBase/filters-pagination)
+- [OpenAPI](https://jandersongarcia.github.io/PachyBase/openapi)
+- [AI Endpoints](https://jandersongarcia.github.io/PachyBase/ai-endpoints)
+- [MCP Adapter](https://jandersongarcia.github.io/PachyBase/mcp)
+- [BaaS Platform](https://jandersongarcia.github.io/PachyBase/baas-platform)
+- [CLI](https://jandersongarcia.github.io/PachyBase/cli)
+- [Production Deploy](https://jandersongarcia.github.io/PachyBase/production-deploy)
+- [Agent Templates](https://jandersongarcia.github.io/PachyBase/agent-templates)
+- [Contributing](https://jandersongarcia.github.io/PachyBase/contributing)
+- [Roadmap](https://jandersongarcia.github.io/PachyBase/roadmap)
+- [Examples](https://jandersongarcia.github.io/PachyBase/examples)
+- [Release Process](https://jandersongarcia.github.io/PachyBase/release-process)
 
 To work on the docs site locally from the Git repository:
 
@@ -433,7 +433,7 @@ Release readiness check:
 
 ## Contributing and roadmap
 
-- Contribution guide: [Contributing](https://jandersongarcia.github.io/pachybase/contributing)
+- Contribution guide: [Contributing](https://jandersongarcia.github.io/PachyBase/contributing)
 - Roadmap: [ROADMAP.md](ROADMAP.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Release notes: [RELEASE_NOTES.md](RELEASE_NOTES.md)
