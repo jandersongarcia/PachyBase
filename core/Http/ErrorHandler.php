@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PachyBase\Http;
 
 use PachyBase\Config;
+use PachyBase\Services\Audit\AuditLogger;
+use PachyBase\Services\Observability\RequestContext;
 use Throwable;
 
 final class ErrorHandler
@@ -42,6 +44,9 @@ final class ErrorHandler
                 return;
             }
 
+            $exception = new \ErrorException($error['message'], 0, $error['type'], $error['file'], $error['line']);
+            self::logger()->logException($exception, self::currentRequest(), 500);
+
             ApiResponse::error(
                 'FATAL_ERROR',
                 self::errorMessage('A fatal error interrupted the request.'),
@@ -59,10 +64,56 @@ final class ErrorHandler
 
     public static function renderException(Throwable $exception): never
     {
+        $code = $exception->getCode();
+        $statusCode = (is_int($code) && $code >= 100 && $code <= 599) ? $code : 500;
+        self::logger()->logException($exception, self::currentRequest(), $statusCode);
+
+        if ($exception instanceof ValidationException) {
+            ApiResponse::validationError(
+                $exception->details(),
+                self::publicMessage($exception->getMessage(), 422),
+                $exception->errorCode()
+            );
+        }
+
+        if ($exception instanceof AuthenticationException) {
+            ApiResponse::authenticationError(
+                self::publicMessage($exception->getMessage(), 401),
+                $exception->errorCode()
+            );
+        }
+
+        if ($exception instanceof AuthorizationException) {
+            ApiResponse::authorizationError(
+                self::publicMessage($exception->getMessage(), 403),
+                $exception->errorCode()
+            );
+        }
+
+        $errorCode = match ($statusCode) {
+            400 => 'BAD_REQUEST',
+            401 => 'UNAUTHORIZED',
+            403 => 'FORBIDDEN',
+            404 => 'NOT_FOUND',
+            405 => 'METHOD_NOT_ALLOWED',
+            408 => 'REQUEST_TIMEOUT',
+            409 => 'CONFLICT',
+            422 => 'UNPROCESSABLE_ENTITY',
+            429 => 'TOO_MANY_REQUESTS',
+            default => 'INTERNAL_SERVER_ERROR',
+        };
+
+        $type = match ($statusCode) {
+            401 => 'authentication_error',
+            403 => 'authorization_error',
+            422 => 'validation_error',
+            default => $statusCode >= 500 ? 'server_error' : 'application_error',
+        };
+
         ApiResponse::error(
-            'INTERNAL_SERVER_ERROR',
-            self::errorMessage($exception->getMessage()),
-            500,
+            $errorCode,
+            self::publicMessage($exception->getMessage(), $statusCode),
+            $statusCode,
             self::debugDetails(
                 $exception->getMessage(),
                 $exception->getFile(),
@@ -71,7 +122,7 @@ final class ErrorHandler
                 $exception->getTrace()
             ),
             [],
-            'server_error'
+            $type
         );
     }
 
@@ -80,6 +131,19 @@ final class ErrorHandler
         return self::debugEnabled()
             ? $developmentMessage
             : 'An unexpected internal error occurred.';
+    }
+
+    private static function publicMessage(string $developmentMessage, int $statusCode): string
+    {
+        if ($statusCode >= 500) {
+            return self::errorMessage($developmentMessage);
+        }
+
+        if (trim($developmentMessage) === '') {
+            return ApiResponse::defaultMessageForStatus($statusCode);
+        }
+
+        return $developmentMessage;
     }
 
     private static function debugDetails(
@@ -113,5 +177,26 @@ final class ErrorHandler
     private static function debugEnabled(): bool
     {
         return Config::debugEnabled();
+    }
+
+    private static function currentRequest(): Request
+    {
+        $request = RequestContext::current();
+
+        if ($request instanceof Request) {
+            return $request;
+        }
+
+        $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+
+        return new Request(
+            (string) ($_SERVER['REQUEST_METHOD'] ?? 'CLI'),
+            is_string($path) && $path !== '' ? $path : '/'
+        );
+    }
+
+    private static function logger(): AuditLogger
+    {
+        return new AuditLogger();
     }
 }
