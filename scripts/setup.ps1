@@ -122,6 +122,7 @@ function Validate-DatabaseConfig {
     }
 
     $resolved = @{
+        APP_NAME = Get-ConfigValue -Config $Config -Key "APP_NAME" -Default "pachybase"
         DB_DRIVER = $driver
         DB_HOST = Get-ConfigValue -Config $Config -Key "DB_HOST" -Default $supported[$driver].Host
         DB_PORT = Get-ConfigValue -Config $Config -Key "DB_PORT" -Default $supported[$driver].Port
@@ -131,6 +132,8 @@ function Validate-DatabaseConfig {
         DB_IMAGE = [string] $supported[$driver].Image
         DB_VOLUME_PATH = [string] $supported[$driver].VolumePath
     }
+
+    $resolved["COMPOSE_PROJECT_NAME"] = Get-ContainerNamePrefix -Config $resolved
 
     foreach ($field in @("DB_DATABASE", "DB_USERNAME", "DB_PASSWORD")) {
         if ([string]::IsNullOrWhiteSpace($resolved[$field])) {
@@ -184,8 +187,10 @@ function Write-DockerComposeFile {
 
     $databaseEnvironment = Get-DatabaseEnvironmentLines -Config $Config
     $databaseVolume = Get-DatabaseVolumeName -Config $Config
-    $containerPrefix = Get-ContainerNamePrefix -Config $Config
+    $containerPrefix = [string] $Config["COMPOSE_PROJECT_NAME"]
     $compose = @(
+        "name: ${containerPrefix}",
+        '',
         'services:',
         '  web:',
         '    image: nginx:1.27-alpine',

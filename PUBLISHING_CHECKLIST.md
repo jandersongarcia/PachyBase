@@ -1,6 +1,6 @@
 # Publishing Checklist
 
-## Public release candidate checklist
+## Public release checklist
 
 - Confirm `VERSION`, `CHANGELOG.md`, and `RELEASE_NOTES.md` describe the intended release.
 - Run `./pachybase doctor` and resolve every error before publishing.

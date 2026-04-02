@@ -150,5 +150,5 @@ php -S 127.0.0.1:8080 -t public public/router.php
 
 - `./pachybase start`, `stop`, `status`, `doctor`, and `test` work in local mode when `APP_RUNTIME=local`.
 - Direct PHP commands such as `php scripts/migrate.php up` and `php scripts/seed.php run` remain available for step-by-step maintenance.
-- Run `./pachybase doctor` before sharing the environment or publishing a release candidate.
+- Run `./pachybase doctor` before sharing the environment or publishing a release.
 - Run tests locally with `./pachybase test` or `vendor/bin/phpunit --testdox`.

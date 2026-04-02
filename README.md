@@ -2,7 +2,7 @@
 
 PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
 
-Current stage: release candidate `1.0.0-rc.4`
+Current stable release: `1.0.0`
 
 ## Quick start (Docker)
 

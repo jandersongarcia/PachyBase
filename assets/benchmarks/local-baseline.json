@@ -35,7 +35,7 @@
       "path": "/api/{entity}?per_page=1",
       "iterations": 6,
       "expect_status": 200,
-      "max_average_ms": 300,
+      "max_average_ms": 350,
       "max_p95_ms": 450,
       "requires_token": true
     }

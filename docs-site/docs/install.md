@@ -50,13 +50,21 @@ Choose [Local Installation](./local-install.md) if you want:
 
 This is the main track and the recommended starting point.
 
+### Linux / macOS
+
 ```bash
 cp .env.example .env
 ./pachybase install
 ./pachybase doctor
 ```
 
-On Windows, replace `./pachybase` with `.\pachybase.bat`.
+### Windows
+
+```powershell
+Copy-Item .env.example .env
+.\pachybase.bat install
+.\pachybase.bat doctor
+```
 
 Read the full guide: [Install with Docker](./docker-install.md)
 
@@ -87,7 +95,7 @@ Read the full guide: [Local Installation](./local-install.md)
 
 ## Release readiness
 
-Before sharing the environment with other developers or publishing a release candidate, run the runtime checks that match your chosen track:
+Before sharing the environment with other developers or publishing a release, run the runtime checks that match your chosen track:
 
 - Docker track: `./pachybase doctor`
 - Local track: `./pachybase doctor` (or `php scripts/doctor.php` when you want the direct PHP entrypoint)

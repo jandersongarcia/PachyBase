@@ -27,12 +27,19 @@ PachyBase is a self-hosted PHP backend foundation focused on predictable JSON AP
 
 ## Quick start (Docker)
 
+### Linux / macOS
+
 ```bash
 cp .env.example .env
 ./pachybase install
 ```
 
-On Windows, use `Copy-Item .env.example .env` and `.\pachybase.bat install`.
+### Windows
+
+```powershell
+Copy-Item .env.example .env
+.\pachybase.bat install
+```
 
 After the stack is ready:
 
@@ -42,6 +49,12 @@ After the stack is ready:
 - Development admin login: `admin@pachybase.local` / `pachybase123`
 
 For the full installation decision tree, start with [Install](./install.md). The Docker path is the primary track, and [Local Installation](./local-install.md) is the official manual alternative.
+
+## AI Skills
+
+PachyBase ships a dedicated `.ai-skills/` directory containing composable skills for AI agents. These files help AI assistants and tooling understand project-specific architectures, CRUD workflows, and conventions, directly improving their performance and code generation accuracy when working on a PachyBase application. 
+
+You can find more details in the [Agent Templates](./agent-templates.md) documentation.
 
 ## Documentation map
 

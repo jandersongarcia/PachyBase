@@ -99,4 +99,4 @@ You can also re-run the database bootstrap manually when needed:
 docker compose -f docker/docker-compose.yml exec php php scripts/bootstrap-database.php
 ```
 
-Before sharing the environment with other developers or publishing a release candidate, run `./pachybase doctor`.
+Before sharing the environment with other developers or publishing a release, run `./pachybase doctor`.

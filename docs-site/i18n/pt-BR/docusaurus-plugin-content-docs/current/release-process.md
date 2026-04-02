@@ -5,7 +5,7 @@ title: Processo de Release
 
 # Processo de Release
 
-O PachyBase `1.0.0-rc.1` adiciona um fluxo orientado a release para validar o repositorio antes de entrega-lo a terceiros.
+O PachyBase `1.0.0` inclui um fluxo orientado a release para validar o repositorio antes de entrega-lo a terceiros.
 
 ## Sequencia recomendada
 

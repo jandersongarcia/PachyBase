@@ -87,7 +87,7 @@ Leia o guia completo: [Instalacao local](./local-install.md)
 
 ## Pronto para release
 
-Antes de compartilhar o ambiente com outros devs ou publicar uma release candidate, rode as verificacoes da trilha escolhida:
+Antes de compartilhar o ambiente com outros devs ou publicar uma release, rode as verificacoes da trilha escolhida:
 
 - Trilha Docker: `./pachybase doctor`
 - Trilha local: `./pachybase doctor` (ou `php scripts/doctor.php` se voce quiser o entrypoint PHP direto)
