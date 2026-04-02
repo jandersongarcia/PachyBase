@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PachyBase\Database\Metadata;
 
+use PachyBase\Config;
 use PachyBase\Database\Schema\ColumnDefinition;
 use PachyBase\Database\Schema\SchemaInspector;
 use PachyBase\Database\Schema\TableSchema;
@@ -17,7 +18,7 @@ final class EntityIntrospector
         private readonly ?SchemaInspector $schemaInspector = null,
         ?MetadataCacheInterface $cache = null
     ) {
-        $this->cache = $cache ?? new FileMetadataCache();
+        $this->cache = $cache ?? $this->defaultCache();
     }
 
     public function inspectTable(string $table): EntityDefinition
@@ -90,6 +91,13 @@ final class EntityIntrospector
     private function schemaInspector(): SchemaInspector
     {
         return $this->schemaInspector ?? new SchemaInspector();
+    }
+
+    private function defaultCache(): MetadataCacheInterface
+    {
+        return Config::isProduction()
+            ? new FileMetadataCache()
+            : new InMemoryMetadataCache();
     }
 
     /**

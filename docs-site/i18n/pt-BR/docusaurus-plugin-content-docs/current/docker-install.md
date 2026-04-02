@@ -95,4 +95,4 @@ Se necessario, voce tambem pode rodar novamente o bootstrap do banco manualmente
 docker compose -f docker/docker-compose.yml exec php php scripts/bootstrap-database.php
 ```
 
-Antes de compartilhar o ambiente com outros devs ou publicar uma release candidate, rode `./pachybase doctor`.
+Antes de compartilhar o ambiente com outros devs ou publicar uma release, rode `./pachybase doctor`.

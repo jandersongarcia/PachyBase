@@ -13,6 +13,7 @@ class DockerInstallTest extends TestCase
     public function testBuildDockerComposePublishesDatabasePort(): void
     {
         $compose = buildDockerCompose([
+            'APP_NAME' => 'GoolCraft Backend',
             'DB_DRIVER' => 'mysql',
             'DB_IMAGE' => 'mysql:8',
             'DB_PORT' => '3306',
@@ -25,9 +26,11 @@ class DockerInstallTest extends TestCase
         $databaseSection = explode("  db:\n", str_replace("\r\n", "\n", $compose), 2)[1] ?? '';
 
         $this->assertStringContainsString('"3306:3306"', $compose);
+        $this->assertStringContainsString("name: goolcraft-backend\n", str_replace("\r\n", "\n", $compose));
         $this->assertStringContainsString("context: ..", $compose);
         $this->assertStringContainsString("dockerfile: docker/Dockerfile", $compose);
         $this->assertStringContainsString('image: nginx:1.27-alpine', $compose);
+        $this->assertStringContainsString('container_name: goolcraft-backend-web', $compose);
         $this->assertStringContainsString('db_mysql_data:/var/lib/mysql', $compose);
         $this->assertStringContainsString("volumes:\n  db_mysql_data:\n", str_replace("\r\n", "\n", $compose));
         $this->assertStringContainsString("\n    ports:\n", $databaseSection);
@@ -36,6 +39,7 @@ class DockerInstallTest extends TestCase
     public function testBuildDockerComposeIsDeterministicAndUsesUnixLineEndings(): void
     {
         $config = [
+            'APP_NAME' => 'PachyBase',
             'DB_DRIVER' => 'pgsql',
             'DB_IMAGE' => 'postgres:15',
             'DB_PORT' => '5432',

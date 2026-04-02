@@ -129,11 +129,13 @@ function validateDatabaseConfig(array $config): array
     }
 
     $config['DB_DRIVER'] = $driver;
+    $config['APP_NAME'] = trim((string) ($config['APP_NAME'] ?? 'pachybase'));
     $config['DB_HOST'] = trim((string) ($config['DB_HOST'] ?? $supportedDrivers[$driver]['host']));
     $config['DB_PORT'] = trim((string) ($config['DB_PORT'] ?? $supportedDrivers[$driver]['port']));
     $config['DB_DATABASE'] = trim((string) ($config['DB_DATABASE'] ?? ''));
     $config['DB_USERNAME'] = trim((string) ($config['DB_USERNAME'] ?? ''));
     $config['DB_PASSWORD'] = trim((string) ($config['DB_PASSWORD'] ?? ''));
+    $config['COMPOSE_PROJECT_NAME'] = containerNamePrefix($config);
 
     foreach (['DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'] as $field) {
         if ($config[$field] === '') {
@@ -174,9 +176,11 @@ function buildDockerCompose(array $config): string
 {
     $databaseService = buildDatabaseService($config);
     $databaseVolume = databaseVolumeName($config);
-    $containerPrefix = containerNamePrefix($config);
+    $containerPrefix = (string) ($config['COMPOSE_PROJECT_NAME'] ?? containerNamePrefix($config));
 
     return implode(DOCKER_COMPOSE_EOL, [
+        'name: ' . $containerPrefix,
+        '',
         'services:',
         '  web:',
         '    image: nginx:1.27-alpine',

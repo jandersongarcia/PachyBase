@@ -1,8 +1,8 @@
 # Release Notes
 
-## PachyBase 1.0.0-rc.4
+## PachyBase 1.0.0
 
-This release candidate closes a set of release-preparation gaps around agent onboarding, Docker ergonomics, and public documentation consistency. The focus is making PachyBase easier to hand to third-party agents and contributors without leaking local-only scaffolding or leaving stale setup references behind.
+This stable release closes the remaining release-preparation gaps around agent onboarding, Docker ergonomics, and public documentation consistency. The focus is making PachyBase easier to hand to third-party agents and contributors without leaking local-only scaffolding or leaving stale setup references behind.
 
 ### Highlights
 

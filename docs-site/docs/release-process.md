@@ -5,7 +5,7 @@ title: Release Process
 
 # Release Process
 
-PachyBase `1.0.0-rc.1` adds a release-oriented workflow so the repository can be validated before it is handed to third parties.
+PachyBase `1.0.0` includes a release-oriented workflow so the repository can be validated before it is handed to third parties.
 
 ## Recommended sequence
 

@@ -103,6 +103,10 @@ write_docker_compose_file() {
   local db_environment
   local db_volume_name="db_${DB_DRIVER}_data"
   local APP_NAME="$(get_config_value APP_NAME "PachyBase")"
+  local PROJECT_NAME
+
+  PROJECT_NAME="$(printf '%s' "$APP_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]+/-/g; s/^-+//; s/-+$//')"
+  [[ -n "$PROJECT_NAME" ]] || PROJECT_NAME="pachybase"
 
   if [[ "$DB_DRIVER" == "mysql" ]]; then
     db_environment=$(cat <<EOF
@@ -125,10 +129,12 @@ EOF
   fi
 
   cat >"$COMPOSE_PATH" <<EOF
+name: ${PROJECT_NAME}
+
 services:
   web:
     image: nginx:1.27-alpine
-    container_name: ${APP_NAME}-web
+    container_name: ${PROJECT_NAME}-web
     ports:
       - "8080:80"
     volumes:
@@ -141,7 +147,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: ${APP_NAME}-php
+    container_name: ${PROJECT_NAME}-php
     working_dir: /var/www/html
     volumes:
       - ../:/var/www/html
@@ -150,7 +156,7 @@ services:
 
   db:
     image: $DB_IMAGE
-    container_name: ${APP_NAME}-db
+    container_name: ${PROJECT_NAME}-db
     restart: unless-stopped
     ports:
       - "$DB_PORT:$DB_PORT"

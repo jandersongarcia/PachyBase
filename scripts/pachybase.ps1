@@ -18,8 +18,31 @@ function Fail {
     exit 1
 }
 
+function Get-PhpCommand {
+    $configuredPhp = [Environment]::GetEnvironmentVariable("PACHYBASE_PHP_BIN")
+    if (-not [string]::IsNullOrWhiteSpace($configuredPhp) -and (Test-Path $configuredPhp)) {
+        return $configuredPhp
+    }
+
+    $phpCommand = Get-Command php -ErrorAction SilentlyContinue
+    if ($null -ne $phpCommand) {
+        return $phpCommand.Source
+    }
+
+    foreach ($candidate in @(
+        "C:\xampp\php\php.exe",
+        "C:\xampp8\php\php.exe"
+    )) {
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
 function Test-PhpAvailable {
-    return $null -ne (Get-Command php -ErrorAction SilentlyContinue)
+    return $null -ne (Get-PhpCommand)
 }
 
 function Test-HostCliAvailable {
@@ -80,8 +103,30 @@ function Invoke-DockerCompose {
 }
 
 function Invoke-HostCli {
-    & php $phpCliScript @Arguments
+    $phpCommand = Get-PhpCommand
+    if ($null -eq $phpCommand) {
+        Fail "PHP was not found on the host."
+    }
+
+    & $phpCommand $phpCliScript @Arguments
     exit $LASTEXITCODE
+}
+
+function Use-HostCliForCommand {
+    param([string] $Command)
+
+    if (-not (Test-HostCliAvailable)) {
+        return $false
+    }
+
+    return $Command -in @(
+        "version",
+        "env:validate",
+        "app:key",
+        "auth:token:create",
+        "mcp:serve",
+        "benchmark:local"
+    )
 }
 
 function Invoke-ContainerCli {
@@ -174,12 +219,12 @@ Main commands:
 '@ | Write-Host
 }
 
-if (Test-HostCliAvailable) {
-    Invoke-HostCli
-}
-
 $command = if ($Arguments.Count -gt 0) { $Arguments[0] } else { "help" }
 $rest = if ($Arguments.Count -gt 1) { $Arguments[1..($Arguments.Count - 1)] } else { @() }
+
+if (Use-HostCliForCommand -Command $command) {
+    Invoke-HostCli
+}
 
 switch ($command) {
     "help" { Show-Help }

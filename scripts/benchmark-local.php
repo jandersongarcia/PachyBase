@@ -301,12 +301,28 @@ function benchmarkLocalRequest(string $method, string $url, ?string $token = nul
         throw new RuntimeException((string) ($decoded['error']['message'] ?? ('HTTP ' . $statusCode)));
     }
 
+    $normalizedHeaders = benchmarkLocalNormalizeHeaders($responseHeaders);
+
     return [
         'status_code' => $statusCode,
-        'duration_ms' => $durationMs,
-        'headers' => benchmarkLocalNormalizeHeaders($responseHeaders),
+        'duration_ms' => benchmarkLocalMeasuredDuration($normalizedHeaders, $durationMs),
+        'headers' => $normalizedHeaders,
         'payload' => $decoded,
     ];
+}
+
+/**
+ * @param array<string, string> $headers
+ */
+function benchmarkLocalMeasuredDuration(array $headers, float $fallbackDurationMs): float
+{
+    $responseTime = trim((string) ($headers['X-Response-Time-Ms'] ?? ''));
+
+    if ($responseTime !== '' && is_numeric($responseTime)) {
+        return (float) $responseTime;
+    }
+
+    return $fallbackDurationMs;
 }
 
 /**

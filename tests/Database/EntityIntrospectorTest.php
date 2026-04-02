@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Database;
 
+use PachyBase\Config;
 use PachyBase\Database\Metadata\EntityIntrospector;
+use PachyBase\Database\Metadata\FileMetadataCache;
+use PachyBase\Database\Metadata\InMemoryMetadataCache;
 use PachyBase\Database\Schema\ColumnDefinition;
 use PachyBase\Database\Schema\PrimaryKeyDefinition;
 use PachyBase\Database\Schema\TableDefinition;
@@ -13,6 +16,11 @@ use PHPUnit\Framework\TestCase;
 
 class EntityIntrospectorTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        Config::reset();
+    }
+
     public function testBuildsEntityMetadataFromRawTableSchema(): void
     {
         $tableSchema = new TableSchema(
@@ -62,5 +70,30 @@ class EntityIntrospectorTest extends TestCase
         $entity = (new EntityIntrospector())->buildDefinition($tableSchema);
 
         $this->assertSame('migration', $entity->name);
+    }
+
+    public function testUsesInMemoryCacheOutsideProduction(): void
+    {
+        Config::override(['APP_ENV' => 'development']);
+
+        $cache = $this->cacheFor(new EntityIntrospector());
+
+        $this->assertInstanceOf(InMemoryMetadataCache::class, $cache);
+    }
+
+    public function testUsesFileCacheInProduction(): void
+    {
+        Config::override(['APP_ENV' => 'production']);
+
+        $cache = $this->cacheFor(new EntityIntrospector());
+
+        $this->assertInstanceOf(FileMetadataCache::class, $cache);
+    }
+
+    private function cacheFor(EntityIntrospector $introspector): object
+    {
+        $reflection = new \ReflectionProperty($introspector, 'cache');
+
+        return $reflection->getValue($introspector);
     }
 }

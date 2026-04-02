@@ -170,4 +170,17 @@ class BenchmarkLocalTest extends TestCase
         $this->assertSame(15.0, $scenario['average_ms']);
         $this->assertSame(20.0, $scenario['p95_ms']);
     }
+
+    public function testMeasuredDurationPrefersServerReportedResponseTimeHeader(): void
+    {
+        $duration = benchmarkLocalMeasuredDuration(
+            [
+                'X-Response-Time-Ms' => '187.42',
+                'Server-Timing' => 'app;dur=187.42',
+            ],
+            1250.0
+        );
+
+        $this->assertSame(187.42, $duration);
+    }
 }
