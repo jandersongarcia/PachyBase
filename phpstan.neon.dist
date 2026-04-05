@@ -1,0 +1,15 @@
+parameters:
+	level: 1
+	paths:
+		- api
+		- auth
+		- config
+		- core
+		- database
+		- modules
+		- public
+		- routes
+		- scripts
+		- services
+		- utils
+	tmpDir: build/phpstan

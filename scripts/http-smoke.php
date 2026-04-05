@@ -236,9 +236,7 @@ function httpSmokeRequest(string $method, string $url, ?string $token = null): a
     ]);
 
     $body = @file_get_contents($url, false, $context);
-    $responseHeaders = isset($http_response_header) && is_array($http_response_header)
-        ? $http_response_header
-        : [];
+    $responseHeaders = is_array($http_response_header) ? $http_response_header : [];
     $statusCode = httpSmokeStatusCode($responseHeaders);
 
     if ($body === false) {

@@ -282,9 +282,7 @@ function benchmarkLocalRequest(string $method, string $url, ?string $token = nul
     $startedAt = hrtime(true);
     $body = @file_get_contents($url, false, $context);
     $durationMs = (hrtime(true) - $startedAt) / 1_000_000;
-    $responseHeaders = isset($http_response_header) && is_array($http_response_header)
-        ? $http_response_header
-        : [];
+    $responseHeaders = is_array($http_response_header) ? $http_response_header : [];
     $statusCode = benchmarkLocalStatusCode($responseHeaders);
 
     if ($body === false) {
