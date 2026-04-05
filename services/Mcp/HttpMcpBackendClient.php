@@ -104,9 +104,7 @@ final class HttpMcpBackendClient implements PachyBaseMcpBackendInterface
         ]);
 
         $body = @file_get_contents($url, false, $context);
-        $responseHeaders = isset($http_response_header) && is_array($http_response_header)
-            ? $http_response_header
-            : [];
+        $responseHeaders = is_array($http_response_header) ? $http_response_header : [];
         $statusCode = $this->statusCode($responseHeaders);
 
         if ($body === false) {

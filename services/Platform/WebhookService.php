@@ -229,7 +229,7 @@ final class WebhookService
             ],
         ]);
         $responseBody = @file_get_contents((string) $webhook['target_url'], false, $context);
-        $statusLine = is_array($http_response_header ?? null) ? (string) ($http_response_header[0] ?? '') : '';
+        $statusLine = is_array($http_response_header) ? (string) ($http_response_header[0] ?? '') : '';
         preg_match('/\s(\d{3})\s/', $statusLine, $matches);
         $statusCode = isset($matches[1]) ? (int) $matches[1] : 0;
 

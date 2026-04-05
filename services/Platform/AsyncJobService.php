@@ -246,7 +246,7 @@ final class AsyncJobService
             ],
         ]);
         $responseBody = @file_get_contents($url, false, $context);
-        $statusLine = is_array($http_response_header ?? null) ? (string) ($http_response_header[0] ?? '') : '';
+        $statusLine = is_array($http_response_header) ? (string) ($http_response_header[0] ?? '') : '';
         preg_match('/\s(\d{3})\s/', $statusLine, $matches);
         $statusCode = isset($matches[1]) ? (int) $matches[1] : 0;
 

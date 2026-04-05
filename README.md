@@ -1,83 +1,55 @@
 # PachyBase
 
-PachyBase is an open-source, self-hosted backend foundation built with PHP for teams that want predictable JSON APIs, Docker-first local setup, automatic CRUD, and machine-readable contracts for both humans and AI tooling.
-
 Current stable release: `1.0.0`
 
-## Quick start (Docker)
+## 1. Visao geral do projeto
 
-```bash
-cp .env.example .env
-./pachybase install
-```
+PachyBase e uma base open-source e self-hosted para construir APIs JSON previsiveis em PHP. O projeto combina runtime HTTP, autenticacao, CRUD declarativo, contratos legiveis por humanos e agentes, e uma camada operacional para provisionamento e gestao de projetos.
 
-On Windows:
+Problemas que o PachyBase resolve no estado atual do repositorio:
 
-```powershell
-Copy-Item .env.example .env
-.\pachybase.bat install
-```
+- padroniza respostas HTTP em um envelope JSON fixo
+- expoe CRUD automatico a partir de configuracao declarativa
+- publica documentacao de contrato por OpenAPI e endpoints AI-friendly
+- oferece autenticacao com JWT, refresh token e API token
+- centraliza setup local e operacional via CLI e scripts
+- adiciona capacidades de plataforma para backups, restore, secrets, jobs, storage e webhooks
+- suporta isolamento multi-tenant e quotas por tenant
+- inclui validacao de release com smoke checks, benchmark local, stress test, PHPUnit e PHPStan
 
-After installation:
+Principais modulos e superficies:
 
-- API base URL: `http://localhost:8080`
-- Database port on the host: `3306` for MySQL or `5432` for PostgreSQL
-- OpenAPI document: `http://localhost:8080/openapi.json`
-- AI schema: `http://localhost:8080/ai/schema`
-- MCP adapter: `./pachybase mcp:serve`
-- Development admin: `admin@pachybase.local` / `pachybase123`
+- `Platform`: provisionamento de projetos, backups, restore, secrets, jobs assincronos, storage e webhooks
+- `Tenancy`: resolucao de tenant, quotas por tenant e isolamento por contexto
+- `Rate Limiting`: politica e enforcement por backend de arquivo ou banco
+- `Auth`: login, refresh, revogacao, `me`, emissao e revogacao de API tokens
+- `CRUD`: exposicao automatica de entidades definidas em `config/CrudEntities.php`
+- `OpenAPI`: geracao e publicacao do documento OpenAPI 3.0.3
+- `AI Schema`: endpoints `/ai/schema`, `/ai/entities` e `/ai/entity/{name}`
+- `MCP`: adapter stdio para agentes em `scripts/mcp-serve.php`
+- `Observability`: metricas basicas por request e headers como `Server-Timing`
+- `Audit`: trilha de auditoria para fluxos sensiveis quando habilitada
 
-Before exposing the project to third parties, run:
-
-```bash
-./pachybase doctor
-./pachybase http:smoke
-./pachybase benchmark:local
-./pachybase acceptance:check
-```
-
-## Installation paths
-
-PachyBase documents two official installation paths:
-
-- Docker-first quick start for the fastest supported setup
-- Local installation for teams that want PHP, Composer, and the database directly on the host while keeping the same project CLI
-
-Documentation entry points:
-
-- Install overview: <https://jandersongarcia.github.io/PachyBase/install>
-- Install with Docker: <https://jandersongarcia.github.io/PachyBase/docker-install>
-- Local installation: <https://jandersongarcia.github.io/PachyBase/local-install>
-- AI Skills: [.ai-skills/](.ai-skills/) directory with project-specific skills for agents
-
-## What is included today
-
-- Predictable JSON API contract with a fixed success/error envelope
-- Docker-first installation and project CLI
-- MySQL and PostgreSQL support
-- Migrations, seeds, and database bootstrap
-- JWT access tokens and API tokens
-- Automatic CRUD driven by `config/CrudEntities.php`
-- Generated OpenAPI 3.0.3 document
-- AI-friendly discovery endpoints
-- MCP stdio adapter for agent tooling
-- operator plane for project provisioning, backups, restore, secrets, jobs, storage, and webhooks
-- acceptance smoke check for HTTP and MCP release validation
-- dedicated HTTP smoke checks and a versioned local benchmark baseline
-- PHPUnit regression suite
-
-## Runtime surface
-
-Core routes:
+Superficie HTTP principal atual:
 
 - `GET /`
+- `GET /health`
 - `GET /openapi.json`
 - `GET /ai/schema`
 - `GET /ai/entities`
 - `GET /ai/entity/{name}`
-
-Operator routes:
-
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/revoke`
+- `GET /api/auth/me`
+- `POST /api/auth/tokens`
+- `DELETE /api/auth/tokens/{id}`
+- `GET /api/{entity}`
+- `GET /api/{entity}/{id}`
+- `POST /api/{entity}`
+- `PUT /api/{entity}/{id}`
+- `PATCH /api/{entity}/{id}`
+- `DELETE /api/{entity}/{id}`
 - `GET /api/platform/projects`
 - `POST /api/platform/projects`
 - `POST /api/platform/projects/{project}/backups`
@@ -91,29 +63,47 @@ Operator routes:
 - `POST /api/platform/storage`
 - `GET /api/platform/storage/{id}/download`
 
-Authentication routes:
+## 2. Setup do ambiente
 
-- `POST /api/auth/login`
-- `POST /api/auth/refresh`
-- `POST /api/auth/revoke`
-- `GET /api/auth/me`
-- `POST /api/auth/tokens`
-- `DELETE /api/auth/tokens/{id}`
+Pre-requisitos para desenvolvimento:
 
-Automatic CRUD routes:
+- PHP 8.2 ou superior
+- Composer
+- MySQL ou PostgreSQL
+- Docker e Docker Compose se voce optar pelo fluxo Docker-first
 
-- `GET /api/{entity}`
-- `GET /api/{entity}/{id}`
-- `POST /api/{entity}`
-- `PUT /api/{entity}/{id}`
-- `PATCH /api/{entity}/{id}`
-- `DELETE /api/{entity}/{id}`
+Observacoes importantes:
 
-## Configuration
+- o projeto suporta oficialmente `mysql` e `pgsql`
+- os comandos `vendor/bin/phpunit` e `vendor/bin/phpstan` exigem `php` disponivel no `PATH`
+- no Windows, se `php` nao estiver no `PATH`, os wrappers em `vendor/bin` nao executam corretamente
+- no Windows com XAMPP, um caminho tipico e `C:\xampp\php`; adicione esse diretorio ao `PATH` antes de usar os comandos de qualidade
 
-PachyBase reads runtime settings from `.env`.
+Instalacao de dependencias:
 
-Required values:
+```bash
+composer install
+```
+
+Se voce ainda nao tiver um `composer` global disponivel:
+
+```bash
+php composer.phar install
+```
+
+Configuracao inicial do ambiente:
+
+```bash
+cp .env.example .env
+```
+
+No Windows:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Valores principais esperados em `.env`:
 
 ```env
 APP_NAME=PachyBase
@@ -127,314 +117,207 @@ APP_URL=http://localhost:8080
 DB_DRIVER=mysql
 DB_HOST=db
 DB_PORT=3306
+DB_HOST_PORT=3307
 DB_DATABASE=pachybase
 DB_USERNAME=pachybase
 DB_PASSWORD=change_this_password
 ```
 
-When `APP_RUNTIME=docker`, PachyBase keeps `DB_HOST=db` for the application container, and also publishes the database port on the host machine. External tools should connect to the server IP or DNS name using `DB_PORT`.
-
-Optional values include:
-
-- `APP_KEY`
-- `APP_CORS_ALLOWED_ORIGINS`
-- `APP_CORS_ALLOWED_HEADERS`
-- `APP_CORS_EXPOSED_HEADERS`
-- `APP_CORS_ALLOW_CREDENTIALS`
-- `APP_CORS_MAX_AGE`
-- `APP_RATE_LIMIT_ENABLED`
-- `APP_RATE_LIMIT_MAX_REQUESTS`
-- `APP_RATE_LIMIT_WINDOW_SECONDS`
-- `APP_RATE_LIMIT_STORAGE_PATH`
-- `APP_AUDIT_LOG_ENABLED`
-- `APP_AUDIT_LOG_PATH`
-- `DB_SCHEMA` for PostgreSQL
-- `AUTH_JWT_SECRET`
-- `AUTH_JWT_ISSUER`
-- `AUTH_ACCESS_TTL_MINUTES`
-- `AUTH_REFRESH_TTL_DAYS`
-- `AUTH_BOOTSTRAP_ADMIN_EMAIL`
-- `AUTH_BOOTSTRAP_ADMIN_PASSWORD`
-- `AUTH_BOOTSTRAP_ADMIN_NAME`
-
-Declarative CRUD behavior lives in [`config/CrudEntities.php`](config/CrudEntities.php).
-
-## Supported databases
-
-Officially supported drivers:
-
-- `mysql`
-- `pgsql`
-
-Docker generation, adapter selection, schema inspection, migrations, seeds, CRUD metadata, OpenAPI generation, and tests are all aligned around these two drivers.
-
-## API contract
-
-Every response follows the same envelope:
-
-```json
-{
-  "success": true,
-  "data": {},
-  "meta": {
-    "contract_version": "1.0",
-    "request_id": "b0bb2f930d4b4f5ab9e2d1f7b74b9df6",
-    "timestamp": "2026-03-11T03:00:00+00:00",
-    "path": "/",
-    "method": "GET"
-  },
-  "error": null
-}
-```
-
-Validation, authentication, authorization, conflict, and server failures keep the same outer structure.
-
-## Authentication
-
-PachyBase supports:
-
-- JWT access tokens for web/mobile clients
-- refresh tokens through `pb_auth_sessions`
-- API tokens for server-to-server access
-
-Protected endpoints expect `Authorization: Bearer <token>`.
-
-## Browser Integration and CORS
-
-PachyBase now supports automatic `OPTIONS` preflight handling and configurable CORS for browser-based apps.
-
-To enable cross-origin access, define the allowed origins in `.env`:
-
-```env
-APP_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:5173
-APP_CORS_ALLOWED_HEADERS=Authorization,Content-Type,X-Requested-With,X-Request-Id
-APP_CORS_EXPOSED_HEADERS=
-APP_CORS_ALLOW_CREDENTIALS=false
-APP_CORS_MAX_AGE=600
-```
-
-Notes:
-
-- Leave `APP_CORS_ALLOWED_ORIGINS` empty to keep CORS disabled
-- The runtime automatically answers browser preflight requests for known routes
-- Allowed methods are derived from the registered route surface for each path
-- If you use wildcard origins with credentials enabled, PachyBase echoes the request origin instead of returning `*`
-
-## Automatic CRUD, filters, and pagination
-
-CRUD exposure is driven by `config/CrudEntities.php`.
-
-The current runtime supports:
-
-- pagination with `page` and `per_page`
-- equality and operator filters with `filter[field]=value` and `filter[field][operator]=value`
-- sorting with `sort=field` and `sort=-field`
-- search with `search=term`
-
-Example:
+Setup Docker-first suportado pelo projeto:
 
 ```bash
-curl "http://localhost:8080/api/system-settings?filter[is_public]=1&sort=setting_key" \
-  -H "Authorization: Bearer <access-token>"
+./pachybase install
 ```
 
-## Operational hardening
+No Windows:
 
-PachyBase can now enforce a simple file-backed rate limit and append an audit trail for sensitive auth and CRUD write operations.
-
-```env
-APP_RATE_LIMIT_ENABLED=true
-APP_RATE_LIMIT_MAX_REQUESTS=120
-APP_RATE_LIMIT_WINDOW_SECONDS=60
-APP_AUDIT_LOG_ENABLED=true
-APP_AUDIT_LOG_PATH=build/logs/audit.jsonl
+```powershell
+.\pachybase.bat install
 ```
 
-Responses also expose the current request identifier in the `X-Request-Id` header.
+Apos a instalacao padrao:
 
-For minimal observability, every HTTP response now also exposes:
+- API base URL: `http://localhost:8080`
+- OpenAPI: `http://localhost:8080/openapi.json`
+- AI schema: `http://localhost:8080/ai/schema`
+- login local de desenvolvimento: `admin@pachybase.local` / `pachybase123`
+- tela simples de login local: `http://localhost:8080/login.html`
 
-- `Server-Timing`
-- `X-Response-Time-Ms`
-- `X-Query-Time-Ms`
-- `X-Introspection-Time-Ms`
+Notas operacionais relevantes:
 
-Structured logs for auth, CRUD, and error flows are written to `APP_AUDIT_LOG_PATH` when audit logging is enabled.
+- quando `APP_RUNTIME=docker`, o app usa `DB_HOST=db` internamente no container
+- ferramentas no host devem usar `DB_HOST_PORT` quando esse valor estiver definido
+- o comportamento declarativo do CRUD fica em `config/CrudEntities.php`
+- a configuracao minima do PHPStan fica em `phpstan.neon.dist`
 
-## OpenAPI and AI endpoints
+## 3. Comandos principais
 
-OpenAPI:
+Comandos obrigatorios de qualidade:
 
 ```bash
-curl http://localhost:8080/openapi.json
-./pachybase openapi:build --output=build/openapi.json
+vendor/bin/phpunit --testdox
+vendor/bin/phpstan analyse --no-progress
 ```
 
-AI-friendly endpoints:
+Scripts do Composer disponiveis no estado atual:
 
 ```bash
-curl http://localhost:8080/ai/schema
-curl http://localhost:8080/ai/entities
-curl http://localhost:8080/ai/entity/system-settings
+composer test
+composer analyse
+composer check
 ```
 
-Integration token for agents:
+O que cada script faz:
+
+- `composer test`: executa `phpunit --testdox`
+- `composer analyse`: executa `phpstan analyse --no-progress`
+- `composer check`: executa `test` e depois `analyse`
+
+CLI principal do projeto:
+
+- `./pachybase install`
+- `./pachybase start`
+- `./pachybase stop`
+- `./pachybase doctor`
+- `./pachybase http:smoke`
+- `./pachybase benchmark:local`
+- `./pachybase stress:test`
+- `./pachybase acceptance:check`
+- `./pachybase status`
+- `./pachybase test`
+
+Comandos de banco e build expostos em `composer.json`:
+
+- `composer migrate`
+- `composer migrations:status`
+- `composer migrations:rollback`
+- `composer db:seed`
+- `composer db:seed:status`
+- `composer db:bootstrap`
+- `composer db:fresh`
+- `composer crud:sync`
+- `composer openapi:generate`
+- `composer ai:build`
+
+Exemplos praticos:
 
 ```bash
-./pachybase auth:token:create "Codex Agent" --scope=crud:read --scope=entity:system-settings:read
+vendor/bin/phpunit --testdox
+vendor/bin/phpstan analyse --no-progress
+composer check
+./pachybase doctor
+./pachybase http:smoke
 ```
 
-Optional user binding:
+## 4. Fluxo de desenvolvimento
+
+O projeto esta orientado por testes. Mudancas novas devem comecar por cobertura automatizada ou por ampliacao explicita do contrato de testes existente.
+
+Arquivo de referencia para evolucao de cobertura:
+
+- `tests.md`
+
+Como `tests.md` deve ser usado no estado atual:
+
+- como inventario da cobertura automatizada existente
+- como backlog priorizado de lacunas de teste
+- como contrato para a proxima rodada de implementacao de testes
+
+Ciclo obrigatorio de trabalho:
+
+1. implementar a alteracao
+2. adicionar ou atualizar testes compativeis com a mudanca
+3. rodar `vendor/bin/phpunit --testdox`
+4. corrigir qualquer falha de teste
+5. rodar `vendor/bin/phpstan analyse --no-progress`
+6. corrigir qualquer erro de analise estatica
+7. so considerar a tarefa concluida quando ambos retornarem `exit code 0`
+
+Para mudancas maiores:
+
+- consulte `tests.md` antes de decidir a area de cobertura
+- priorize os testes marcados como lacunas de maior risco
+- preserve a estrutura atual de integracao e suporte em `tests/Support`
+
+## 5. Estrutura do projeto
+
+Diretorios principais do runtime:
+
+- `api/`: kernel HTTP e controllers da API
+- `auth/`: autenticacao, autorizacao, repositorios de token e middleware
+- `config/`: carga de configuracao, bootstrap e entidades CRUD declarativas
+- `core/`: infraestrutura comum de CLI, HTTP e release metadata
+- `database/`: conexao, adapters, schema, metadata, migrations e seeds
+- `modules/`: registro modular das superficies `System`, `Auth`, `CRUD`, `OpenAPI`, `AI` e `Platform`
+- `services/`: regras de negocio e servicos operacionais
+- `utils/`: utilitarios como `Json`, `Crypto` e parsing simples
+- `routes/`: registro central de rotas HTTP
+- `public/`: front controller, router do servidor embutido e `login.html`
+- `scripts/`: comandos operacionais e fluxos de automacao
+- `sdk/`: SDK JavaScript atual do projeto
+
+Diretorios de teste e apoio:
+
+- `tests/Api`: testes de kernel e fluxos HTTP principais
+- `tests/Auth`: testes de autenticacao e autorizacao
+- `tests/Database`: adapters, query layer, schema, migrations e seeds
+- `tests/Http`: infraestrutura HTTP
+- `tests/Services`: testes de servicos por dominio
+- `tests/Support`: suporte compartilhado para integracao e utilidades de teste
+- `tests.md`: backlog e contrato de cobertura
+
+Outros diretorios relevantes:
+
+- `assets/`: artefatos auxiliares como baselines
+- `build/`: saida de build, backups, storage e temporarios de ferramentas
+- `docker/`: artefatos do setup Docker
+- `docs-site/`: site de documentacao
+- `.ai-skills/`: arquivos de apoio para agentes
+
+Mapeamento rapido de responsabilidades em `services/`:
+
+- `services/Platform/`: projetos, backups, secrets, jobs, webhooks, storage e overview operacional
+- `services/Tenancy/`: resolucao de tenant, quotas e regras de contexto
+- `services/OpenApi/`: construcao do documento OpenAPI
+- `services/Ai/`: construcao do schema AI
+- `services/Mcp/`: adapter HTTP para o backend MCP
+- `services/Observability/`: contexto e metricas de request
+- `services/Audit/`: auditoria
+
+## 6. Regras de qualidade
+
+Regras operacionais obrigatorias:
+
+- nao aceitar codigo novo sem teste quando a mudanca altera comportamento
+- nao aceitar testes quebrados
+- nao aceitar analise estatica quebrada
+- nao mesclar trabalho com `phpunit` falhando
+- nao mesclar trabalho com `phpstan` falhando
+
+Checks obrigatorios para considerar uma alteracao concluida:
 
 ```bash
-./pachybase auth:token:create "Claude Agent" --scope=crud:read --user-email=admin@pachybase.local
+vendor/bin/phpunit --testdox
+vendor/bin/phpstan analyse --no-progress
 ```
 
-## AI Skills
+Criterio pratico de aprovacao:
 
-PachyBase ships a public [`.ai-skills/`](.ai-skills/) directory with small, composable skills for AI agents that work on the project.
+- a suite de testes precisa terminar com `exit code 0`
+- a analise estatica precisa terminar com `exit code 0`
+- o `README.md` e o `tests.md` precisam continuar coerentes com o estado real do repositorio quando houver mudanca estrutural
 
-Included starting points:
+## Referencias adicionais
 
-- `.ai-skills/pachybase-architecture.md`
-- `.ai-skills/pachybase-crud-workflow.md`
-- `.ai-skills/pachybase-runtime-checks.md`
-- `.ai-skills/pachybase-mcp-agent.md`
-
-Use these files to help an agent load the right project conventions before changing code, generating docs, or connecting to a live PachyBase runtime.
-
-## CLI
-
-Lifecycle:
-
-- `install`
-- `start`
-- `stop`
-- `doctor`
-- `http:smoke`
-- `benchmark:local`
-- `status`
-- `test`
-
-Environment:
-
-- `env:sync`
-- `env:validate`
-- `app:key`
-
-Docker:
-
-- `docker:sync`
-- `docker:up`
-- `docker:down`
-- `docker:logs`
-
-Database:
-
-- `db:setup`
-- `db:migrate`
-- `db:rollback`
-- `db:seed`
-- `db:fresh`
-
-Platform:
-
-- `project:provision`
-- `project:backup`
-- `project:restore`
-- `jobs:work`
-
-Scaffolding:
-
-- `make:module`
-- `make:entity`
-- `make:migration`
-- `make:seed`
-- `make:controller`
-- `make:service`
-- `make:middleware`
-- `make:test`
-- `crud:generate`
-
-Build and inspection:
-
-- `auth:install`
-- `auth:token:create`
-- `entity:list`
-- `crud:sync`
-- `openapi:build`
-- `ai:build`
-- `version`
-
-Legacy aliases such as `env:init`, `docker:install`, `release:check`, and `openapi:generate` still resolve for backward compatibility, but the canonical command names are the ones listed above.
-
-## Documentation
-
-Published docs:
+Documentacao publicada:
 
 - English: <https://jandersongarcia.github.io/PachyBase/>
 - Portuguese: <https://jandersongarcia.github.io/PachyBase/pt-BR/>
 
-The `docs-site/` workspace remains in the Git repository for documentation authoring, but it is excluded from release archives to keep the distributed package focused on the runtime.
+Arquivos operacionais do repositorio:
 
-Recommended entry points:
-
-- [Overview](https://jandersongarcia.github.io/PachyBase/)
-- [Install](https://jandersongarcia.github.io/PachyBase/install)
-- [Install with Docker](https://jandersongarcia.github.io/PachyBase/docker-install)
-- [Local Installation](https://jandersongarcia.github.io/PachyBase/local-install)
-- [Configuration](https://jandersongarcia.github.io/PachyBase/configuration)
-- [Supported Databases](https://jandersongarcia.github.io/PachyBase/supported-databases)
-- [API Contract](https://jandersongarcia.github.io/PachyBase/api-contract)
-- [Authentication and Authorization](https://jandersongarcia.github.io/PachyBase/auth-security)
-- [Automatic CRUD](https://jandersongarcia.github.io/PachyBase/automatic-crud)
-- [Filters and Pagination](https://jandersongarcia.github.io/PachyBase/filters-pagination)
-- [OpenAPI](https://jandersongarcia.github.io/PachyBase/openapi)
-- [AI Endpoints](https://jandersongarcia.github.io/PachyBase/ai-endpoints)
-- [MCP Adapter](https://jandersongarcia.github.io/PachyBase/mcp)
-- [BaaS Platform](https://jandersongarcia.github.io/PachyBase/baas-platform)
-- [CLI](https://jandersongarcia.github.io/PachyBase/cli)
-- [Production Deploy](https://jandersongarcia.github.io/PachyBase/production-deploy)
-- [Agent Templates](https://jandersongarcia.github.io/PachyBase/agent-templates)
-- [Contributing](https://jandersongarcia.github.io/PachyBase/contributing)
-- [Roadmap](https://jandersongarcia.github.io/PachyBase/roadmap)
-- [Examples](https://jandersongarcia.github.io/PachyBase/examples)
-- [Release Process](https://jandersongarcia.github.io/PachyBase/release-process)
-
-To work on the docs site locally from the Git repository:
-
-```bash
-cd docs-site
-npm install
-npm run start
-```
-
-## Testing
-
-Preferred command:
-
-```bash
-./pachybase test
-```
-
-Or directly:
-
-```bash
-docker compose -f docker/docker-compose.yml run --rm php vendor/bin/phpunit --testdox
-```
-
-Release readiness check:
-
-```bash
-./pachybase doctor
-./pachybase http:smoke
-./pachybase benchmark:local
-```
-
-## Contributing and roadmap
-
-- Contribution guide: [Contributing](https://jandersongarcia.github.io/PachyBase/contributing)
-- Roadmap: [ROADMAP.md](ROADMAP.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
-- Release notes: [RELEASE_NOTES.md](RELEASE_NOTES.md)
-- Publishing checklist: [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md)
+- `ROADMAP.md`
+- `CHANGELOG.md`
+- `RELEASE_NOTES.md`
+- `PUBLISHING_CHECKLIST.md`
+- `ENVIRONMENT_VALIDATION.md`

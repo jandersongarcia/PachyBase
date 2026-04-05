@@ -129,7 +129,7 @@ final class LocalRuntimeManager
     {
         if ($this->isWindows()) {
             $powershellCommand = sprintf(
-                "$p = Start-Process -FilePath 'php' -ArgumentList '%s' -WorkingDirectory '%s' -WindowStyle Hidden -RedirectStandardOutput '%s' -RedirectStandardError '%s' -PassThru; Write-Output $p.Id",
+                "\$p = Start-Process -FilePath 'php' -ArgumentList '%s' -WorkingDirectory '%s' -WindowStyle Hidden -RedirectStandardOutput '%s' -RedirectStandardError '%s' -PassThru; Write-Output \$p.Id",
                 str_replace("'", "''", $command),
                 str_replace("'", "''", $this->basePath),
                 str_replace("'", "''", $this->logFile()),
